@@ -1,0 +1,5 @@
+{ "nome": "User", 
+"nome_tabela": "tb01_user", 
+"pagination": true, 
+"perpage":[15,25,50,100], 
+"campos": [ { "nome": "id", "tipo": "int", "primary_key": true, "autoincrement": true }, { "nome": "no_user", "tipo": "str", "tam": 100, "obrigatorio": true }, { "nome": "no_email", "tipo": "str", "tam": 150, "unico": true, "obrigatorio": true }, { "nome": "no_password", "tipo": "str", "tam": 255, "obrigatorio": true, "senha": true, }, { "nome": "co_validate", "tipo": "str", "tam": 12 }, { "nome": "dt_update", "tipo": "datetime", "default": "now" }, { "nome": "ic_ativo", "tipo": "int", "default": "1" } ] }
