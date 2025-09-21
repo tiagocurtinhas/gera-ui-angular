@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-generate_angular_crud_multi_v7.py
+generate_angular_crud_multi_v9.py
 ---------------------------------
 • Multi-entidades (lê todos os .json de --spec-dir)
 • JSON tolerante (remove vírgulas finais e comentários // /* */)
 • Angular 20 standalone + Material + Bootstrap
-• List responsiva com filtro + MatPaginator + MatSort (client-side) + estado vazio
-• Form com upload via FormData
-• Rotas automáticas em src/app/app.routes.ts
+• List responsiva com filtro + MatPaginator + MatSort + estado vazio
+  (✅ paginator fora do *ngIf* e conectados via setters do @ViewChild)
+• Form com upload via FormData + validações
+• Rotas em src/app/app.routes.ts
 • Subpastas por entidade: src/app/componentes/<entity>/...
 • Models em: src/app/shared/models (plural)
-• 🚀 ALERTAS (Bootstrap + Signals) com CommonModule
-• 🚀 CONFIG (sem InjectionToken): shared/models/config.model.ts + config.ts
+• Alerts globais (Bootstrap + Signals) com CommonModule
+• Spinner global (overlay) + LoadingStore + HTTP interceptors (loading + erro)
+• Config central: shared/models/config.model.ts + config.ts
+• Patches em app.config.ts (providers) se existir; ou cria um básico
 """
 
 import argparse, os, re, json
@@ -176,13 +179,13 @@ export class AlertStore {
 
   success(msg: string, ms = 4000) { return this.push('success', msg, ms); }
   info(msg: string, ms = 5000)    { return this.push('info', msg, ms); }
-  warning(msg: string, ms = 0)    { return self.push('warning', msg, ms); } // não auto-fecha
+  warning(msg: string, ms = 0)    { return this.push('warning', msg, ms); } // não auto-fecha
   danger(msg: string, ms = 8000)  { return this.push('danger', msg, ms); }
 
   close(id: number) { this._alerts.update(list => list.filter(a => a.id !== id)); }
   clear() { this._alerts.set([]); }
 }
-""".replace("self.push", "this.push"))  # apenas para escapar o 'this' no docstring
+""")
 
     if not os.path.exists(alerts_ts):
         with open(alerts_ts, "w", encoding="utf-8") as f:
@@ -229,31 +232,206 @@ export class AlertsComponent {
   left: 12px;
   max-width: 720px;
   margin: 0 auto;
-  z-index: 1080;
+  z-index: 2000;
 }
 .app-alerts .alert + .alert { margin-top: 8px; }
 """)
 
-    # cria AppComponent mínimo se não existir
+# --------- LOADING + SPINNER + INTERCEPTORS ---------
+def write_loading_infra(base_dir: str):
+    _, serv_dir, _, shared_comp_dir = ensure_base_dirs(base_dir)
+    loading_store = os.path.join(serv_dir, "loading.store.ts")
+    interceptors = os.path.join(serv_dir, "http.interceptors.ts")
+    spinner_ts = os.path.join(shared_comp_dir, "spinner.ts")
+    spinner_html = os.path.join(shared_comp_dir, "spinner.html")
+    spinner_css = os.path.join(shared_comp_dir, "spinner.css")
+
+    if not os.path.exists(loading_store):
+        with open(loading_store, "w", encoding="utf-8") as f:
+            f.write("""import { Injectable, computed, signal } from '@angular/core';
+
+@Injectable({ providedIn: 'root' })
+export class LoadingStore {
+  private _pending = signal(0);
+  readonly pending = this._pending.asReadonly();
+  readonly isLoading = computed(() => this._pending() > 0);
+
+  inc() { this._pending.update(n => n + 1); }
+  dec() { this._pending.update(n => Math.max(0, n - 1)); }
+  reset() { this._pending.set(0); }
+}
+""")
+
+    if not os.path.exists(interceptors):
+        with open(interceptors, "w", encoding="utf-8") as f:
+            f.write("""import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { catchError, finalize, throwError } from 'rxjs';
+import { LoadingStore } from './loading.store';
+import { AlertStore } from './alert.store';
+
+export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
+  const loading = inject(LoadingStore);
+  loading.inc();
+  return next(req).pipe(finalize(() => loading.dec()));
+};
+
+export const errorInterceptor: HttpInterceptorFn = (req, next) => {
+  const alerts = inject(AlertStore);
+  return next(req).pipe(
+    catchError((err: HttpErrorResponse) => {
+      let msg = '';
+      if (err.status === 0) {
+        msg = `Não foi possível conectar ao servidor (${req.method} ${req.url}). Verifique a API, CORS ou rede.`;
+      } else {
+        const detail =
+          (typeof err.error === 'string' && err.error) ||
+          (err.error?.message) ||
+          err.message || '';
+        msg = `Erro ${err.status} em ${req.method} ${req.url}${detail ? ' — ' + detail : ''}`;
+      }
+      alerts.danger(msg);
+      return throwError(() => err);
+    })
+  );
+};
+""")
+
+    if not os.path.exists(spinner_ts):
+        with open(spinner_ts, "w", encoding="utf-8") as f:
+            f.write("""import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { LoadingStore } from '../../services/loading.store';
+
+@Component({
+  selector: 'app-spinner',
+  standalone: true,
+  imports: [CommonModule, MatProgressSpinnerModule],
+  templateUrl: './spinner.html',
+  styleUrls: ['./spinner.css']
+})
+export class SpinnerComponent {
+  loading = inject(LoadingStore).isLoading;
+}
+""")
+
+    if not os.path.exists(spinner_html):
+        with open(spinner_html, "w", encoding="utf-8") as f:
+            f.write("""<div class="spinner-overlay" *ngIf="loading()">
+  <div class="spinner-box">
+    <mat-progress-spinner mode="indeterminate" diameter="56"></mat-progress-spinner>
+    <div class="label">Processando...</div>
+  </div>
+</div>
+""")
+
+    if not os.path.exists(spinner_css):
+        with open(spinner_css, "w", encoding="utf-8") as f:
+            f.write(""".spinner-overlay {
+  position: fixed; inset: 0;
+  background: rgba(255,255,255,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2100;
+}
+.spinner-box { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.label { font-size: 14px; }
+""")
+
+# --------- App component/config ---------
+def write_app_component(base_dir: str):
     app_dir = os.path.join(base_dir, "src", "app")
+    os.makedirs(app_dir, exist_ok=True)
     app_component = os.path.join(app_dir, "app.component.ts")
     if not os.path.exists(app_component):
         with open(app_component, "w", encoding="utf-8") as f:
             f.write("""import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AlertsComponent } from './shared/components/alerts';
+import { SpinnerComponent } from './shared/components/spinner';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, AlertsComponent],
+  imports: [RouterOutlet, AlertsComponent, SpinnerComponent],
   template: `
     <app-alerts></app-alerts>
+    <app-spinner></app-spinner>
     <router-outlet></router-outlet>
   `,
 })
 export class AppComponent {}
 """)
+    else:
+        with open(app_component, "r", encoding="utf-8") as f:
+            s = f.read()
+        if "<app-spinner>" not in s:
+            if "SpinnerComponent" not in s:
+                s = s.replace("from './shared/components/alerts';",
+                              "from './shared/components/alerts';\nimport { SpinnerComponent } from './shared/components/spinner';")
+            s = s.replace("imports: [RouterOutlet, AlertsComponent",
+                          "imports: [RouterOutlet, AlertsComponent, SpinnerComponent")
+            s = s.replace("<app-alerts></app-alerts>",
+                          "<app-alerts></app-alerts>\n    <app-spinner></app-spinner>")
+            with open(app_component, "w", encoding="utf-8") as f:
+                f.write(s)
+
+def write_or_patch_app_config(base_dir: str):
+    app_dir = os.path.join(base_dir, "src", "app")
+    os.makedirs(app_dir, exist_ok=True)
+    cfg_path = os.path.join(app_dir, "app.config.ts")
+
+    if not os.path.exists(cfg_path):
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            f.write("""import { ApplicationConfig } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { routes } from './app.routes';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { loadingInterceptor, errorInterceptor } from './services/http.interceptors';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideRouter(routes),
+    provideHttpClient(withInterceptors([loadingInterceptor, errorInterceptor])),
+    provideAnimations(),
+  ],
+};
+""")
+        print("[OK] app.config.ts criado com interceptores.")
+        return
+
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        s = f.read()
+
+    changed = False
+
+    # Garante import withInterceptors
+    if "withInterceptors" not in s:
+        s = re.sub(r"import\s*\{\s*provideHttpClient\s*\}\s*from\s*'@angular/common/http';",
+                   "import { provideHttpClient, withInterceptors } from '@angular/common/http';",
+                   s)
+        changed = True
+
+    # Garante import dos interceptores
+    if "http.interceptors" not in s:
+        s = s.replace("from './app.routes';",
+                      "from './app.routes';\nimport { loadingInterceptor, errorInterceptor } from './services/http.interceptors';")
+        changed = True
+
+    # Injeta withInterceptors se não houver
+    if "withInterceptors([" not in s:
+        s = re.sub(r"provideHttpClient\((.*?)\)",
+                   "provideHttpClient(withInterceptors([loadingInterceptor, errorInterceptor]))",
+                   s, flags=re.S)
+        changed = True
+
+    if changed:
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            f.write(s)
+        print("[OK] app.config.ts atualizado para usar interceptores.")
+    else:
+        print("[INFO] app.config.ts já parece configurado; verifique providers do HttpClient.")
 
 # --------- geração por entidade ---------
 def gen_entity(spec: dict, base_dir: str):
@@ -363,7 +541,7 @@ export class {entity_name}Service {{
     form_controls = [f"      {f['nome']}: new FormControl({form_control_init(f)})" for f in ui_fields]
     form_controls_text = ",\n".join(form_controls)
 
-    # inserir/editar (FieldMeta + helper isArray + dois inputs para combobox) + AlertStore
+    # inserir/editar (com AlertStore + hover nos botões)
     inserir_editar_ts = f"""// Auto-generated insert/edit component for {entity_name}
 import {{ Component, inject, signal }} from '@angular/core';
 import {{ CommonModule }} from '@angular/common';
@@ -376,7 +554,7 @@ import {{ MatSelectModule }} from '@angular/material/select';
 import {{ MatDatepickerModule }} from '@angular/material/datepicker';
 import {{ MatNativeDateModule }} from '@angular/material/core';
 import {{ MatRadioModule }} from '@angular/material/radio';
-import {{ MatAutocompleteModule, MatAutocomplete }} from '@angular/material/autocomplete';
+import {{ MatAutocompleteModule }} from '@angular/material/autocomplete';
 import {{ MatButtonModule }} from '@angular/material/button';
 import {{ MatIconModule }} from '@angular/material/icon';
 import {{ {model_name} }} from '../../shared/models/{entity_lower}.model';
@@ -422,7 +600,6 @@ export default class InserirEditar{entity_name}Component {{
   fields: FieldMeta[] = {fields_ts_text};
   filesMap: Record<string, File | undefined> = {{}};
 
-  // helpers para template
   isArray(val: unknown): val is any[] {{ return Array.isArray(val); }}
 
   form: FormGroup = this.fb.group({{
@@ -432,7 +609,7 @@ export default class InserirEditar{entity_name}Component {{
   ngOnInit(): void {{
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {{
-      this.id = Number(idParam);
+      self.id = Number(idParam);
       this.loading.set(true);
       this.svc.get(this.id).subscribe({{
         next: (data) => {{
@@ -492,7 +669,7 @@ export default class InserirEditar{entity_name}Component {{
       }},
       error: () => {{
         this.loading.set(false);
-        this.alerts.danger('Erro ao salvar. Tente novamente.');
+        // errorInterceptor já exibe alert com detalhes
       }}
     }});
   }}
@@ -500,7 +677,7 @@ export default class InserirEditar{entity_name}Component {{
   onCancel(): void {{ this.router.navigate(['/{entity_lower}s']); }}
   loadOptions(entity: string) {{ return this.svc.getOptions(entity); }}
 }}
-"""
+""".replace("self.id", "this.id")
     with open(insert_edit_ts, "w", encoding="utf-8") as f:
         f.write(inserir_editar_ts)
 
@@ -515,7 +692,7 @@ export default class InserirEditar{entity_name}Component {{
           <mat-form-field appearance="outline" class="w-100">
             <mat-label>{{ f.label }}</mat-label>
 
-            <!-- Inputs comuns (sem autocomplete) -->
+            <!-- Inputs comuns -->
             <input *ngIf="['text','email','senha','number','time','datetime','date'].includes(f.input)"
                    matInput
                    [type]="f.input === 'senha' ? 'password' : (f.input === 'email' ? 'email' : (f.input === 'number' ? 'number' : (f.input === 'time' ? 'time' : (f.input === 'date' ? 'date' : (f.input === 'datetime' ? 'datetime-local' : 'text')))))"
@@ -523,7 +700,7 @@ export default class InserirEditar{entity_name}Component {{
                    [readonly]="f.readonly || null"
                    [formControlName]="f.nome">
 
-            <!-- Combobox com mat-autocomplete (sem union null) -->
+            <!-- Combobox -->
             <input *ngIf="f.input === 'combobox'"
                    matInput
                    [formControlName]="f.nome"
@@ -569,7 +746,7 @@ export default class InserirEditar{entity_name}Component {{
     </div>
 
     <div class="mt-3 d-flex gap-2">
-      <button mat-raised-button color="primary" type="submit">Salvar</button>
+      <button mat-raised-button color="primary" type="submit" [disabled]="loading()">Salvar</button>
       <button mat-button type="button" (click)="onCancel()">Cancelar</button>
     </div>
   </form>
@@ -580,16 +757,34 @@ export default class InserirEditar{entity_name}Component {{
     with open(insert_edit_html, "w", encoding="utf-8") as f:
         f.write(inserir_editar_html)
 
-    inserir_editar_css = """.container { max-width: 980px; } 
-mat-form-field { margin-bottom: 8px; }"""
+    # CSS com HOVER nos botões
+    inserir_editar_css = """.container { max-width: 980px; }
+mat-form-field { margin-bottom: 8px; }
+
+/* Hover suave nos botões */
+button.mat-mdc-raised-button:not([disabled]), a.mat-mdc-raised-button {
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+button.mat-mdc-raised-button:not([disabled]):hover, a.mat-mdc-raised-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+}
+button.mat-mdc-icon-button {
+  transition: transform .12s ease, filter .12s ease;
+}
+button.mat-mdc-icon-button:hover {
+  transform: scale(1.06);
+  filter: brightness(1.05);
+}
+"""
     with open(insert_edit_css, "w", encoding="utf-8") as f:
         f.write(inserir_editar_css)
 
-    # listar (responsivo) + AlertStore
+    # listar (responsivo) com paginator fora do *ngIf* e setters
     display_cols = displayed_columns(ui_fields)
     display_cols_ts = "[" + ", ".join("'" + c + "'" for c in display_cols) + "]"
     perpage_ts = "[" + ", ".join(str(x) for x in perpage) + "]"
-    listar_ts = f"""// Auto-generated list component for {entity_name} (responsive + paginator/sort)
+    listar_ts = f"""// Auto-generated list component for {entity_name} (responsive + paginator/sort with ViewChild setters)
 import {{ Component, inject, ViewChild, AfterViewInit }} from '@angular/core';
 import {{ CommonModule }} from '@angular/common';
 import {{ MatTableModule, MatTableDataSource }} from '@angular/material/table';
@@ -625,23 +820,39 @@ export default class Listar{entity_name}Component implements AfterViewInit {{
   displayedColumns = {display_cols_ts};
   pageSizeOptions: number[] = {perpage_ts};
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
+  paginator!: MatPaginator;
+  sort!: MatSort;
+
+  @ViewChild(MatPaginator) set matPaginator(p: MatPaginator) {{
+    if (p) {{
+      this.paginator = p;
+      this.dataSource.paginator = p;
+    }}
+  }}
+
+  @ViewChild(MatSort) set matSort(s: MatSort) {{
+    if (s) {{
+      this.sort = s;
+      this.dataSource.sort = s;
+    }}
+  }}
 
   ngOnInit(): void {{ this.reload(); }}
-  ngAfterViewInit(): void {{
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
-  }}
+  ngAfterViewInit(): void {{ /* Setters já conectam paginator/sort */ }}
 
   applyFilter(event: Event) {{
     const value = (event.target as HTMLInputElement).value;
     this.dataSource.filter = value.trim().toLowerCase();
+    if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
   }}
 
   reload(): void {{
     this.svc.list().subscribe({{
-      next: (list) => {{ this.dataSource.data = list || []; }},
+      next: (list) => {{
+        this.dataSource.data = list || [];
+        if (this.paginator) this.dataSource.paginator = this.paginator;
+        if (this.sort) this.dataSource.sort = this.sort;
+      }},
       error: () => {{ this.alerts.danger('Erro ao carregar lista.'); }}
     }});
   }}
@@ -661,8 +872,7 @@ export default class Listar{entity_name}Component implements AfterViewInit {{
     with open(list_ts, "w", encoding="utf-8") as f:
         f.write(listar_ts)
 
-    # listar HTML com responsividade e estado vazio
-    listar_html = f"""<!-- Auto-generated list template (responsive) -->
+    listar_html = f"""<!-- Auto-generated list template (responsive; paginator fora do *ngIf*) -->
 <div class="container py-3">
 
   <div class="header d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
@@ -701,9 +911,9 @@ export default class Listar{entity_name}Component implements AfterViewInit {{
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
       </table>
     </div>
-
-    <mat-paginator [pageSizeOptions]="pageSizeOptions" showFirstLastButtons></mat-paginator>
   </ng-container>
+
+  <mat-paginator [pageSizeOptions]="pageSizeOptions" showFirstLastButtons></mat-paginator>
 
   <ng-template #emptyState>
     <div class="empty card p-4 text-center">
@@ -732,6 +942,22 @@ td.mat-footer-cell { white-space: nowrap; }
 td.mat-cell { vertical-align: middle; }
 
 .empty { max-width: 520px; margin: 24px auto; }
+
+/* Hover suave nos botões */
+a.mat-mdc-raised-button, button.mat-mdc-raised-button:not([disabled]) {
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+a.mat-mdc-raised-button:hover, button.mat-mdc-raised-button:not([disabled]):hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+}
+button.mat-mdc-icon-button {
+  transition: transform .12s ease, filter .12s ease;
+}
+button.mat-mdc-icon-button:hover {
+  transform: scale(1.06);
+  filter: brightness(1.05);
+}
 
 @media (max-width: 576px) {
   .table-scroll table { min-width: 600px; }
@@ -769,16 +995,21 @@ def write_routes(base_dir: str, route_entries: list):
         f.write(routes_ts)
 
 def main():
-    parser = argparse.ArgumentParser(description="Gera Angular CRUD multi-entidades (v7: alerts + config + responsivo).")
+    parser = argparse.ArgumentParser(description="Gera Angular CRUD multi-entidades (v9: paginator fix + spinner + interceptors + alerts + config + responsivo + hover).")
     parser.add_argument("--spec-dir", required=True, help="Diretório com arquivos .json (cada um é uma entidade).")
     parser.add_argument("--base", default=".", help="Diretório base onde src/app será criado (default=cwd).")
     args = parser.parse_args()
 
     base_dir = os.path.abspath(args.base)
     ensure_base_dirs(base_dir)
-    write_config_infra(base_dir)   # <- cria config.model.ts + config.ts
-    write_alert_infra(base_dir)    # <- cria infra de alertas
 
+    # infra comum
+    write_config_infra(base_dir)
+    write_alert_infra(base_dir)
+    write_loading_infra(base_dir)
+    write_app_component(base_dir)
+
+    # entidades
     json_files = sorted(glob(os.path.join(args.spec_dir, "*.json")))
     if not json_files:
         raise SystemExit("Nenhum .json encontrado em --spec-dir.")
@@ -798,8 +1029,10 @@ def main():
     if routes:
         write_routes(base_dir, routes)
         print("[OK] Rotas geradas em src/app/app.routes.ts")
-        print("[TIP] Confirme que seu AppComponent usa <app-alerts> e <router-outlet>.")
-    print("[DONE] Concluído.")
 
+    # app.config.ts (providers)
+    write_or_patch_app_config(base_dir)
+
+    print("[DONE] Concluído. Caso use main.ts sem app.config.ts, registre provideHttpClient(withInterceptors([...])) manualmente.")
 if __name__ == "__main__":
     main()
