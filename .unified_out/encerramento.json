@@ -1,0 +1,74 @@
+{
+  "nome": "Encerramento",
+  "nome_tabela": "tb12_encerramento",
+  "tela_login": false,
+  "access_token": false,
+  "token_armazenamento": "localstorage",
+  "pagination": false,
+  "perpage": [
+    15,
+    25,
+    50,
+    100
+  ],
+  "campos": [
+    {
+      "nome": "nu_encerramento",
+      "tipo": "int",
+      "obrigatorio": true,
+      "primary_key": true,
+      "autoincrement": true,
+      "input": "number"
+    },
+    {
+      "nome": "nu_paciente",
+      "tipo": "int",
+      "obrigatorio": true,
+      "input": "number"
+    },
+    {
+      "nome": "nu_tp_motivo_saida",
+      "tipo": "int",
+      "obrigatorio": true,
+      "input": "number"
+    },
+    {
+      "nome": "dh_encerramento",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "ds_observacao",
+      "tipo": "text",
+      "obrigatorio": false,
+      "input": "text"
+    },
+    {
+      "nome": "nu_create",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_create_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "nu_update",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_update_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "input": "datetime"
+    }
+  ]
+}

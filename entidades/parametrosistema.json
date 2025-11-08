@@ -1,0 +1,63 @@
+{
+  "nome": "ParametroSistema",
+  "nome_tabela": "tb66_parametro_sistema",
+  "tela_login": false,
+  "access_token": false,
+  "token_armazenamento": "localstorage",
+  "pagination": false,
+  "perpage": [
+    15,
+    25,
+    50,
+    100
+  ],
+  "campos": [
+    {
+      "nome": "co_parametro",
+      "tipo": "str",
+      "obrigatorio": true,
+      "tam": 120,
+      "primary_key": true,
+      "input": "text"
+    },
+    {
+      "nome": "vl_parametro",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 255,
+      "input": "text"
+    },
+    {
+      "nome": "ds_parametro",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 255,
+      "input": "text"
+    },
+    {
+      "nome": "nu_create",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_create_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "nu_update",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_update_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "input": "datetime"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "nome": "DomTipoAtendimento",
+  "nome_tabela": "tb71_dom_tipo_atendimento",
+  "tela_login": false,
+  "access_token": false,
+  "token_armazenamento": "localstorage",
+  "pagination": false,
+  "perpage": [
+    15,
+    25,
+    50,
+    100
+  ],
+  "campos": [
+    {
+      "nome": "nu_tipo_atendimento",
+      "tipo": "int",
+      "obrigatorio": true,
+      "primary_key": true,
+      "autoincrement": true,
+      "input": "number"
+    },
+    {
+      "nome": "no_tipo_atendimento",
+      "tipo": "str",
+      "obrigatorio": true,
+      "tam": 120,
+      "input": "text"
+    },
+    {
+      "nome": "nu_create",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_create_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "nu_update",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_update_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "input": "datetime"
+    }
+  ]
+}

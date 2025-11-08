@@ -1,0 +1,88 @@
+{
+  "nome": "DocumentoAtendimento",
+  "nome_tabela": "tb22_documento_atendimento",
+  "tela_login": false,
+  "access_token": false,
+  "token_armazenamento": "localstorage",
+  "pagination": false,
+  "perpage": [
+    15,
+    25,
+    50,
+    100
+  ],
+  "campos": [
+    {
+      "nome": "nu_documento_atendimento",
+      "tipo": "int",
+      "obrigatorio": true,
+      "primary_key": true,
+      "autoincrement": true,
+      "input": "number"
+    },
+    {
+      "nome": "nu_paciente",
+      "tipo": "int",
+      "obrigatorio": true,
+      "input": "number"
+    },
+    {
+      "nome": "nu_tp_tipo_documento",
+      "tipo": "int",
+      "obrigatorio": true,
+      "input": "number"
+    },
+    {
+      "nome": "no_documento",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 180,
+      "input": "text"
+    },
+    {
+      "nome": "ds_arquivo",
+      "tipo": "binary",
+      "obrigatorio": false,
+      "input": "text"
+    },
+    {
+      "nome": "no_arquivo",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 255,
+      "input": "text"
+    },
+    {
+      "nome": "dh_emissao",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "nu_create",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_create_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "nu_update",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_update_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "input": "datetime"
+    }
+  ]
+}

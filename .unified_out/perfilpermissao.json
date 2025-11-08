@@ -1,0 +1,61 @@
+{
+  "nome": "PerfilPermissao",
+  "nome_tabela": "tb05_perfil_permissao",
+  "tela_login": false,
+  "access_token": false,
+  "token_armazenamento": "localstorage",
+  "pagination": true,
+  "perpage": [
+    15,
+    25,
+    50,
+    100
+  ],
+  "campos": [
+    {
+      "nome": "nu_perfil_permissao",
+      "tipo": "int",
+      "obrigatorio": true,
+      "primary_key": true,
+      "autoincrement": true,
+      "input": "number"
+    },
+    {
+      "nome": "nu_perfil",
+      "tipo": "int",
+      "obrigatorio": true,
+      "input": "number"
+    },
+    {
+      "nome": "nu_permissao",
+      "tipo": "int",
+      "obrigatorio": true,
+      "input": "number"
+    },
+    {
+      "nome": "nu_create",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_create_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "nu_update",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_update_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "input": "datetime"
+    }
+  ]
+}

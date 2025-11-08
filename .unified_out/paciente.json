@@ -1,0 +1,191 @@
+{
+  "nome": "Paciente",
+  "nome_tabela": "tb08_paciente",
+  "tela_login": false,
+  "access_token": false,
+  "token_armazenamento": "localstorage",
+  "pagination": true,
+  "perpage": [
+    15,
+    25,
+    50,
+    100
+  ],
+  "campos": [
+    {
+      "nome": "nu_paciente",
+      "tipo": "int",
+      "obrigatorio": true,
+      "primary_key": true,
+      "autoincrement": true,
+      "input": "number"
+    },
+    {
+      "nome": "no_paciente",
+      "tipo": "str",
+      "obrigatorio": true,
+      "tam": 150,
+      "input": "text"
+    },
+    {
+      "nome": "no_social",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 120,
+      "input": "text"
+    },
+    {
+      "nome": "dt_nascimento",
+      "tipo": "date",
+      "obrigatorio": false,
+      "input": "date"
+    },
+    {
+      "nome": "sg_sexo",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 1,
+      "input": "text"
+    },
+    {
+      "nome": "nu_cpf",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 14,
+      "input": "text"
+    },
+    {
+      "nome": "nu_rg",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 20,
+      "input": "text"
+    },
+    {
+      "nome": "no_mae",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 150,
+      "input": "text"
+    },
+    {
+      "nome": "no_pai",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 150,
+      "input": "text"
+    },
+    {
+      "nome": "no_responsavel",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 150,
+      "input": "text"
+    },
+    {
+      "nome": "ds_endereco",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 255,
+      "input": "text"
+    },
+    {
+      "nome": "no_bairro",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 120,
+      "input": "text"
+    },
+    {
+      "nome": "no_cidade",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 120,
+      "input": "text"
+    },
+    {
+      "nome": "sg_uf",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 2,
+      "input": "text"
+    },
+    {
+      "nome": "nu_cep",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 9,
+      "input": "text"
+    },
+    {
+      "nome": "nu_telefone1",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 20,
+      "input": "text"
+    },
+    {
+      "nome": "nu_telefone2",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 20,
+      "input": "text"
+    },
+    {
+      "nome": "no_email",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 180,
+      "input": "email"
+    },
+    {
+      "nome": "nu_escolaridade",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "nu_estado_civil",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "nu_etnia",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "nu_situacao_ocupacional",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "nu_create",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_create_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "nu_update",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_update_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "input": "datetime"
+    }
+  ]
+}

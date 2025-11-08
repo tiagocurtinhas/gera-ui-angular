@@ -1,0 +1,76 @@
+{
+  "nome": "ResponsavelPaciente",
+  "nome_tabela": "tb47_responsavel_paciente",
+  "tela_login": false,
+  "access_token": false,
+  "token_armazenamento": "localstorage",
+  "pagination": false,
+  "perpage": [
+    15,
+    25,
+    50,
+    100
+  ],
+  "campos": [
+    {
+      "nome": "nu_responsavel",
+      "tipo": "int",
+      "obrigatorio": true,
+      "primary_key": true,
+      "autoincrement": true,
+      "input": "number"
+    },
+    {
+      "nome": "nu_paciente",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "no_responsavel",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 150,
+      "input": "text"
+    },
+    {
+      "nome": "nu_cpf",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 14,
+      "input": "text"
+    },
+    {
+      "nome": "ds_parentesco",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 60,
+      "input": "text"
+    },
+    {
+      "nome": "nu_create",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_create_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "nu_update",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_update_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "input": "datetime"
+    }
+  ]
+}

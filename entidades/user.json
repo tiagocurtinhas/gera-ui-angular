@@ -1,0 +1,18 @@
+{
+  "nome": "User",
+  "tela_login": true,
+  "access_token": true,
+  "token_armazenamento": "localstorage",
+  "nome_tabela": "tb01_user",
+  "pagination": true,
+  "perpage": [15, 25, 50, 100],
+  "campos": [
+    { "nome": "id", "tipo": "int", "primary_key": true, "autoincrement": true, "readonly": true },
+    { "nome": "no_user", "tipo": "str", "tam": 100, "obrigatorio": true, "input": "text" },
+    { "nome": "no_email", "tipo": "str", "tam": 150, "unico": true, "obrigatorio": true, "input": "email" },
+    { "nome": "no_password", "tipo": "str", "tam": 255, "obrigatorio": true, "input": "senha" },
+    { "nome": "co_validate", "tipo": "str", "tam": 12, "input": "text" },
+    { "nome": "dt_update", "tipo": "datetime", "default": "now", "input": "datetime" },
+    { "nome": "ic_ativo", "tipo": "int", "tam": 1, "default": 0, "input": "number" }
+  ]
+}

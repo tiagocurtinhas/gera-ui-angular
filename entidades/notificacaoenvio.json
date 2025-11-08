@@ -1,0 +1,75 @@
+{
+  "nome": "NotificacaoEnvio",
+  "nome_tabela": "tb18_notificacao_envio",
+  "tela_login": false,
+  "access_token": false,
+  "token_armazenamento": "localstorage",
+  "pagination": false,
+  "perpage": [
+    15,
+    25,
+    50,
+    100
+  ],
+  "campos": [
+    {
+      "nome": "nu_envio",
+      "tipo": "int",
+      "obrigatorio": true,
+      "primary_key": true,
+      "autoincrement": true,
+      "input": "number"
+    },
+    {
+      "nome": "nu_notificacao",
+      "tipo": "int",
+      "obrigatorio": true,
+      "input": "number"
+    },
+    {
+      "nome": "dh_envio",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "sg_status",
+      "tipo": "str",
+      "obrigatorio": false,
+      "tam": 20,
+      "input": "text"
+    },
+    {
+      "nome": "ds_retorno",
+      "tipo": "text",
+      "obrigatorio": false,
+      "input": "text"
+    },
+    {
+      "nome": "nu_create",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_create_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "default": "CURRENT_TIMESTAMP",
+      "input": "datetime"
+    },
+    {
+      "nome": "nu_update",
+      "tipo": "int",
+      "obrigatorio": false,
+      "input": "number"
+    },
+    {
+      "nome": "dh_update_at",
+      "tipo": "datetime",
+      "obrigatorio": false,
+      "input": "datetime"
+    }
+  ]
+}

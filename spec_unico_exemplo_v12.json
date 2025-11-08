@@ -1,0 +1,166 @@
+{
+  "versao": "3.11",
+  "gerado_em": "2025-10-30 14:01:02",
+  "banco": "clinica_fap",
+  "total_tabelas": 73,
+  "entidades": [
+    {
+      "nome": "User",
+      "tablename": "tb01_user",
+      "tela_login": true,
+      "access_token": true,
+      "token_armazenamento": "localstorage",
+      "pagination": true,
+      "perpage": [
+        15,
+        25,
+        50,
+        100
+      ],
+      "colunas": [
+        {
+          "nome_col": "nu_user",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "PK do usuário",
+          "primary_key": 1
+        },
+        {
+          "nome_col": "no_user",
+          "tipo": "str",
+          "tam": 150,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "Nome completo",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "no_email",
+          "tipo": "str",
+          "tam": 180,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "Email",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "ds_senha_hash",
+          "tipo": "str",
+          "tam": 255,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "Senha (hash)",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "ic_ativo",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "1",
+          "comentario": "1=ativo,0=inativo",
+          "listar": 1,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    },
+    {
+      "tablename": "tb73_dom_mine",
+      "nome": "DomMine",
+      "colunas": [
+        {
+          "nome_col": "nu_mine",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "PK do domínio Mine",
+          "primary_key": 1
+        },
+        {
+          "nome_col": "no_mine",
+          "tipo": "str",
+          "tam": 120,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "Descrição do item de Mine",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    }
+  ]
+}
