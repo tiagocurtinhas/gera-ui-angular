@@ -51,7 +51,7 @@ def load_json_tolerant(path: str):
         try:
             return json.loads(sanitized)
         except Exception as e2:
-            print(f"[WARN] Falha ao parsear {os.path.basename(path)}: {e2}")
+            print(f"[WARN] Falha ao parsear {label}: {e2}")
             return None
 
 # --------- helpers ---------
@@ -69,8 +69,8 @@ def labelize(name: str) -> str:
     s = re.sub(r'[_\\-]+', ' ', name).strip()
     return s[:1].upper() + s[1:]
 
-def displayed_columns(campos):
-    cols = [f['nome'] for f in campos if not f.get("ignore")]
+def displayed_columns(colunas):
+    cols = [f['nome_col'] for f in colunas if not f.get("ignore")]
     cols += ["_actions"]
     return cols
 
@@ -778,8 +778,8 @@ def gen_entity(spec: dict, base_dir: str, api_prefix: str):
     entity_lower = entity_name.lower()
     model_name = ts_interface_name(entity_name)
     api_path = f"{api_prefix}/{entity_lower}s"
-    campos = spec["campos"]
-    ui_fields = [f for f in campos if not f.get("ignore")]
+    colunas = spec["colunas"]
+    ui_fields = [f for f in colunas if not f.get("ignore")]
     perpage = spec.get("perpage") or [10,25,50,100]
 
     comp_base, serv_dir, models_dir, _, _ = ensure_base_dirs(base_dir)
@@ -797,7 +797,7 @@ def gen_entity(spec: dict, base_dir: str, api_prefix: str):
     list_css = os.path.join(comp_entity_dir, f"listar.{entity_lower}.css")
 
     # model
-    model_fields = [f"  {f['nome']}: {to_typescript_type(f)};" for f in campos]
+    model_fields = [f"  {f['nome_col']}: {to_typescript_type(f)};" for f in colunas]
     model_ts = f"""// Auto-generated on {datetime.now().isoformat()}
 export interface {model_name} {{
 {os.linesep.join(model_fields)}
@@ -886,11 +886,14 @@ export class {entity_name}Service {{
             }
             pairs = [ f"{k}: {ts_value(v)}" for k,v in whitelisted.items() if v is not None ]
             arr.append("{ " + ", ".join(pairs) + " }")
-        return "[\\n  " + ",\\n  ".join(arr) + "\\n]"
+        return "[\n  " + ",\n  ".join(arr) + "\n]"
+
+
+
     fields_ts_text = fields_ts()
 
-    form_controls = [f"      {f['nome']}: new FormControl({form_control_init(f)})" for f in ui_fields]
-    form_controls_text = ",\\n".join(form_controls)
+    form_controls = [f"      {f['nome_col']}: new FormControl({form_control_init(f)})" for f in ui_fields]
+    form_controls_text = "\n".join(form_controls)
 
     # inserir/editar
     inserir_editar_ts = f"""// Auto-generated insert/edit component for {entity_name}
@@ -908,6 +911,7 @@ import {{ MatRadioModule }} from '@angular/material/radio';
 import {{ MatAutocompleteModule }} from '@angular/material/autocomplete';
 import {{ MatButtonModule }} from '@angular/material/button';
 import {{ MatIconModule }} from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {{ {model_name} }} from '../../shared/models/{entity_lower}.model';
 import {{ AlertStore }} from '../../services/alert.store';
 
@@ -932,7 +936,7 @@ type FieldMeta = {{
     CommonModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatDatepickerModule, MatNativeDateModule, MatRadioModule,
-    MatAutocompleteModule, MatButtonModule, MatIconModule
+    MatAutocompleteModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule
   ],
   templateUrl: './inserir.editar.{entity_lower}.html',
   styleUrls: ['./inserir.editar.{entity_lower}.css']
@@ -947,6 +951,10 @@ export class InserirEditar{entity_name}Component {{
   id: number | null = null;
   loading = signal(false);
   submitted = signal(false);
+
+
+  isEdit(): boolean {{ return !!this.id; }}
+  hasControl(name: string): boolean {{ return !!this.form?.get(name); }}
 
   fields: FieldMeta[] = {fields_ts_text};
   filesMap: Record<string, File | undefined> = {{}};
@@ -1033,7 +1041,7 @@ export class InserirEditar{entity_name}Component {{
 
     inserir_editar_html = """<!-- Auto-generated template -->
 <div class="container py-3">
-  <h2 class="mb-3">Editar/Cadastrar ENTITY_NAME</h2>
+  <h2 class=\"mb-3\">@if (isEdit()) { Editar } @else { Cadastrar } ENTITY_NAME</h2>
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
     <div class="row g-3">
@@ -1090,8 +1098,20 @@ export class InserirEditar{entity_name}Component {{
     </div>
 
     <div class="mt-3 d-flex gap-2">
-      <button mat-raised-button color="primary" type="submit" [disabled]="loading()">Salvar</button>
-      <button mat-stroked-button type="button" (click)="onCancel()">Cancelar</button>
+      <button mat-raised-button color="primary" type="submit" [disabled]="loading()">
+        <ng-container *ngIf="!loading(); else spinnerInsideButton">
+          <mat-icon>save</mat-icon>
+          <span>Salvar</span>
+        </ng-container>
+        <ng-template #spinnerInsideButton>
+          <mat-progress-spinner mode="indeterminate" diameter="20" class="btn-spinner"></mat-progress-spinner>
+          <span>Salvando...</span>
+        </ng-template>
+      </button>
+      <button mat-stroked-button type="button" (click)="onCancel()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Cancelar</span>
+      </button>
     </div>
   </form>
 
@@ -1119,6 +1139,14 @@ button.mat-mdc-icon-button:hover {
   transform: scale(1.06);
   filter: brightness(1.05);
 }
+
+.mb-3 { margin-bottom: 1rem; }
+.mt-3 { margin-top: 1rem; }
+.d-flex { display: flex; align-items: center; gap: .5rem; }
+.gap-2 { gap: .5rem; }
+.w-100 { width: 100%; }
+.btn-spinner { margin-right: 8px; }
+
 """
     with open(insert_edit_css, "w", encoding="utf-8") as f:
         f.write(inserir_editar_css)
@@ -1250,9 +1278,9 @@ export class Listar{entity_name}Component {{
 """
     for f in ui_fields:
         listar_html += f"""
-        <ng-container matColumnDef="{f['nome']}">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header>{labelize(f['nome'])}</th>
-          <td mat-cell *matCellDef="let row">{{{{ row.{f['nome']} }}}}</td>
+        <ng-container matColumnDef="{f['nome_col']}">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{labelize(f['nome_col'])}</th>
+          <td mat-cell *matCellDef="let row">{{{{ row.{f['nome_col']} }}}}</td>
         </ng-container>
 """
     listar_html += f"""
@@ -1388,13 +1416,17 @@ python generate_angular_crud_multi_v11.py --spec-dir ./entidades --base . --pref
     with open(project_readme, "w", encoding="utf-8") as f:
         f.write(md)
 
-# --------- main ---------
+#--------- main ---------
 def main():
     parser = argparse.ArgumentParser(description="Gera Angular CRUD multi-entidades com autenticação opcional (v11).")
-    parser.add_argument("--spec-dir", required=True, help="Diretório com arquivos .json (cada entidade).")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--spec-dir", help="Diretório com arquivos .json (cada entidade).")
+    group.add_argument("--spec-file", help="Arquivo único .json com a chave \"entidades\".")
     parser.add_argument("--base", default=".", help="Diretório base (default=cwd).")
     parser.add_argument("--prefix", default="/api", help="Prefixo da API (default=/api).")
     args = parser.parse_args()
+
+
 
     base_dir = os.path.abspath(args.base)
     api_prefix = norm_prefix(args.prefix)
@@ -1405,19 +1437,45 @@ def main():
     write_loading_infra(base_dir)
     write_app_component(base_dir)
     # auth pode ser habilitado por user.json
-    json_files = sorted(glob(os.path.join(args.spec_dir, "*.json")))
-    if not json_files:
-        raise SystemExit("Nenhum .json encontrado em --spec-dir.")
+
+    specs_iter = []
+    if getattr(args, "spec_dir", None):
+        json_files = sorted(glob(os.path.join(args.spec_dir, "*.json")))
+        if not json_files:
+            raise SystemExit("Nenhum .json encontrado em --spec-dir.")
+        specs_iter = [("file", path) for path in json_files]
+    else:
+        # modo arquivo único
+        try:
+            import json as _json
+            raw = open(args.spec_file, "r", encoding="utf-8").read()
+            payload = _json.loads(raw)
+        except Exception as e:
+            raise SystemExit(f"Falha ao ler --spec-file: {e}")
+        if isinstance(payload, dict) and isinstance(payload.get("entidades"), list):
+            specs_iter = [("obj", ent) for ent in payload["entidades"]]
+        elif isinstance(payload, list):
+            specs_iter = [("obj", ent) for ent in payload]
+        else:
+            specs_iter = [("obj", payload)]
 
     routes = []
     with_auth = False
     storage_kind = "localstorage"
 
-    for path in json_files:
-        spec = load_json_tolerant(path)
+    for kind, item in specs_iter:
+        if kind == 'file':
+            path = item
+            spec = load_json(path)
+        else:
+            path = None
+            spec = item
+
+        label = (os.path.basename(path) if path else str((spec or {}).get('nome','<spec>')))
+# spec already set above for both modes
         if spec is None: continue
-        if not isinstance(spec, dict) or "nome" not in spec or "campos" not in spec:
-            print(f"[WARN] Ignorando {os.path.basename(path)}: falta 'nome'/'campos'.")
+        if not isinstance(spec, dict) or "nome" not in spec or "colunas" not in spec:
+            print(f"[WARN] Ignorando {label}: falta 'nome'/'colunas'.")
             continue
 
         nome_lower = str(spec.get("nome","")).strip().lower()
@@ -1426,7 +1484,7 @@ def main():
             with_auth = True
             storage_kind = normalize_storage(spec.get("token_armazenamento") or "localstorage")
 
-        print(f"[GEN] {os.path.basename(path)} -> entidade {spec['nome']}")
+        print(f"[GEN] {label} -> entidade {spec['nome']}")
         r = gen_entity(spec, base_dir, api_prefix)
         routes.append(r)
 

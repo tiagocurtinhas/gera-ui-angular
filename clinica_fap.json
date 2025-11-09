@@ -1,6 +1,12 @@
 {
-  "nome": "ContatoEmergencia",
-  "nome_tabela": "tb46_contato_emergencia",
+  "versao": "3.11",
+  "gerado_em": "2025-10-30 14:01:02",
+  "banco": "clinica_fap",
+  "total_tabelas": 73,
+  "entidades": [
+    {
+  "nome": "TpAcaoHist",
+  "nome_tabela": "tb40_tp_acao_hist",
   "tela_login": false,
   "access_token": false,
   "token_armazenamento": "localstorage",
@@ -11,9 +17,9 @@
     50,
     100
   ],
-  "campos": [
+  "colunas": [
     {
-      "nome": "nu_contato",
+      "nome_col": "nu_tp_acao_hist",
       "tipo": "int",
       "obrigatorio": true,
       "primary_key": true,
@@ -21,56 +27,60 @@
       "input": "number"
     },
     {
-      "nome": "nu_paciente",
-      "tipo": "int",
-      "obrigatorio": false,
-      "input": "number"
-    },
-    {
-      "nome": "no_contato",
+      "nome_col": "co_tipo",
       "tipo": "str",
-      "obrigatorio": false,
-      "tam": 150,
-      "input": "text"
-    },
-    {
-      "nome": "nu_telefone",
-      "tipo": "str",
-      "obrigatorio": false,
-      "tam": 20,
-      "input": "text"
-    },
-    {
-      "nome": "ds_parentesco",
-      "tipo": "str",
-      "obrigatorio": false,
+      "obrigatorio": true,
       "tam": 60,
       "input": "text"
     },
     {
-      "nome": "nu_create",
+      "nome_col": "no_tipo",
+      "tipo": "str",
+      "obrigatorio": true,
+      "tam": 120,
+      "input": "text"
+    },
+    {
+      "nome_col": "ic_ativo",
+      "tipo": "int",
+      "obrigatorio": false,
+      "default": "1",
+      "input": "number"
+    },
+    {
+      "nome_col": "nu_ordem",
+      "tipo": "int",
+      "obrigatorio": false,
+      "default": "1",
+      "input": "number"
+    },
+    {
+      "nome_col": "nu_create",
       "tipo": "int",
       "obrigatorio": false,
       "input": "number"
     },
     {
-      "nome": "dh_create_at",
+      "nome_col": "dh_create_at",
       "tipo": "datetime",
       "obrigatorio": false,
       "default": "CURRENT_TIMESTAMP",
       "input": "datetime"
     },
     {
-      "nome": "nu_update",
+      "nome_col": "nu_update",
       "tipo": "int",
       "obrigatorio": false,
       "input": "number"
     },
     {
-      "nome": "dh_update_at",
+      "nome_col": "dh_update_at",
       "tipo": "datetime",
       "obrigatorio": false,
       "input": "datetime"
     }
+  ]
+}
+
   ]
 }

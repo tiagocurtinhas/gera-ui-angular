@@ -13,7 +13,7 @@
   ],
   "campos": [
     {
-      "nome": "nu_tp_acao_hist",
+      "nome_col": "nu_tp_acao_hist",
       "tipo": "int",
       "obrigatorio": true,
       "primary_key": true,
@@ -21,54 +21,54 @@
       "input": "number"
     },
     {
-      "nome": "co_tipo",
+      "nome_col": "co_tipo",
       "tipo": "str",
       "obrigatorio": true,
       "tam": 60,
       "input": "text"
     },
     {
-      "nome": "no_tipo",
+      "nome_col": "no_tipo",
       "tipo": "str",
       "obrigatorio": true,
       "tam": 120,
       "input": "text"
     },
     {
-      "nome": "ic_ativo",
+      "nome_col": "ic_ativo",
       "tipo": "int",
       "obrigatorio": false,
       "default": "1",
       "input": "number"
     },
     {
-      "nome": "nu_ordem",
+      "nome_col": "nu_ordem",
       "tipo": "int",
       "obrigatorio": false,
       "default": "1",
       "input": "number"
     },
     {
-      "nome": "nu_create",
+      "nome_col": "nu_create",
       "tipo": "int",
       "obrigatorio": false,
       "input": "number"
     },
     {
-      "nome": "dh_create_at",
+      "nome_col": "dh_create_at",
       "tipo": "datetime",
       "obrigatorio": false,
       "default": "CURRENT_TIMESTAMP",
       "input": "datetime"
     },
     {
-      "nome": "nu_update",
+      "nome_col": "nu_update",
       "tipo": "int",
       "obrigatorio": false,
       "input": "number"
     },
     {
-      "nome": "dh_update_at",
+      "nome_col": "dh_update_at",
       "tipo": "datetime",
       "obrigatorio": false,
       "input": "datetime"

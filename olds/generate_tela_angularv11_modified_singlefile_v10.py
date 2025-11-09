@@ -51,7 +51,7 @@ def load_json_tolerant(path: str):
         try:
             return json.loads(sanitized)
         except Exception as e2:
-            print(f"[WARN] Falha ao parsear {os.path.basename(path)}: {e2}")
+            print(f"[WARN] Falha ao parsear {label}: {e2}")
             return None
 
 # --------- helpers ---------
@@ -886,906 +886,14 @@ export class {entity_name}Service {{
             }
             pairs = [ f"{k}: {ts_value(v)}" for k,v in whitelisted.items() if v is not None ]
             arr.append("{ " + ", ".join(pairs) + " }")
-        return "[\\n  " + ",\\n  ".join(arr) + "\\n]"
+        return "[
+  " + ",
+  ".join(arr) + "
+]"
     fields_ts_text = fields_ts()
 
     form_controls = [f"      {f['nome_col']}: new FormControl({form_control_init(f)})" for f in ui_fields]
-    form_controls_text = ",\\n".join(form_controls)
-
-    # inserir/editar
-    #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-generate_angular_crud_multi_v11.py
-----------------------------------
-Base v10 + autenticação opcional quando a entidade "User" pedir:
-  • Chaves no JSON (ex.: user.json)
-      "tela_login": true,
-      "access_token": true,
-      "token_armazenamento": "localstorage" | "sessionstorage"
-  • Gera:
-      - Auth: token.store.ts (LocalStorage/SessionStorage), auth.service.ts
-      - auth.guard.ts (protege rotas)
-      - auth-token.interceptor (adiciona Authorization: Bearer <token>)
-      - Telas: login, solicitar código (recuperação), redefinir senha
-      - Rotas /login, /recuperar-senha, /redefinir-senha
-      - Ajuste automático em app.config.ts (interceptor)
-      - README.md com instruções
-  • Mantém:
-      - CRUD Angular 20 standalone + Material + Bootstrap
-      - Alerts (signals) e Spinner global + loading/error interceptors
-      - Paginação/sort server-side
-      - Rotas export nomeado por entidade
-"""
-
-import argparse, os, re, json
-from datetime import datetime
-from glob import glob
-
-# --------- parsing tolerante ---------
-def _strip_bom(s: str) -> str:
-    return s[1:] if s and s[0] == '\\ufeff' else s
-
-def _strip_js_comments(s: str) -> str:
-    s = re.sub(r'//.*?(?=\\n|$)', '', s)
-    s = re.sub(r'/\\*.*?\\*/', '', s, flags=re.S)
-    return s
-
-def _strip_trailing_commas(s: str) -> str:
-    return re.sub(r',(\\s*[}\\]])', r'\\1', s)
-
-def load_json_tolerant(path: str):
-    with open(path, "r", encoding="utf-8") as f:
-        raw = f.read()
-    raw = _strip_bom(raw)
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        sanitized = _strip_js_comments(raw)
-        sanitized = _strip_trailing_commas(sanitized)
-        try:
-            return json.loads(sanitized)
-        except Exception as e2:
-            print(f"[WARN] Falha ao parsear {os.path.basename(path)}: {e2}")
-            return None
-
-# --------- helpers ---------
-def ts_interface_name(name: str) -> str:
-    s = re.sub(r'[^0-9a-zA-Z]+', ' ', name).title().replace(' ', '')
-    return f"{s}Model"
-
-def to_typescript_type(field):
-    t = field.get("tipo","str")
-    if t in ("int", "float", "number"): return "number | null"
-    if t in ("datetime", "date", "time"): return "string | null"
-    return "string | null"
-
-def labelize(name: str) -> str:
-    s = re.sub(r'[_\\-]+', ' ', name).strip()
-    return s[:1].upper() + s[1:]
-
-def displayed_columns(colunas):
-    cols = [f['nome_col'] for f in colunas if not f.get("ignore")]
-    cols += ["_actions"]
-    return cols
-
-def control_validators(field):
-    v = []
-    if field.get("obrigatorio"): v.append("Validators.required")
-    if field.get("input") == "email": v.append("Validators.email")
-    if "tam" in field and isinstance(field["tam"], int):
-        v.append(f"Validators.maxLength({field['tam']})")
-        if field.get("input") in ("text", "textArea", "senha") and field["tam"] >= 6:
-            v.append("Validators.minLength(6)")
-    if field.get("tipo") in ("int","float","number"):
-        v.append("Validators.pattern(/^-?\\\\d*(\\\\.\\\\d+)?$/)")
-    return ", ".join(v) if v else ""
-
-def form_control_init(field):
-    dv = "null"
-    di = field.get("default")
-    if di is not None and isinstance(di, (int, float)):
-        dv = str(di)
-    elif isinstance(di, str):
-        dv = f"'{di}'"
-    validators = control_validators(field)
-    disabled = "true" if field.get("readonly") else "false"
-    if validators:
-        return f"{{value: {dv}, disabled: {disabled}}}, [{validators}]"
-    else:
-        return f"{{value: {dv}, disabled: {disabled}}}"
-
-def ts_value(v):
-    if isinstance(v, bool): return 'true' if v else 'false'
-    if isinstance(v, (int, float)): return str(v)
-    if v is None: return 'null'
-    if isinstance(v, list):
-        return '[' + ', '.join(ts_value(x) for x in v) + ']'
-    return f"'{str(v)}'"
-
-def ensure_base_dirs(base_dir: str):
-    comp_base = os.path.join(base_dir, "src", "app", "componentes")
-    serv_dir = os.path.join(base_dir, "src", "app", "services")
-    models_dir = os.path.join(base_dir, "src", "app", "shared", "models")
-    shared_comp_dir = os.path.join(base_dir, "src", "app", "shared", "components")
-    auth_dir = os.path.join(base_dir, "src", "app", "auth")
-    for p in (comp_base, serv_dir, models_dir, shared_comp_dir, auth_dir):
-        os.makedirs(p, exist_ok=True)
-    return comp_base, serv_dir, models_dir, shared_comp_dir, auth_dir
-
-def norm_prefix(prefix: str) -> str:
-    p = (prefix or "").strip()
-    if not p: return ""
-    if not p.startswith("/"): p = "/" + p
-    return p.rstrip("/")
-
-# --------- CONFIG infra ---------
-def write_config_infra(base_dir: str):
-    _, _, models_dir, _, _ = ensure_base_dirs(base_dir)
-    cfg_model = os.path.join(models_dir, "config.model.ts")
-    cfg_val   = os.path.join(models_dir, "config.ts")
-    if not os.path.exists(cfg_model):
-        with open(cfg_model, "w", encoding="utf-8") as f:
-            f.write("""export interface ConfigModel {
-  baseUrl: string;
-}
-""")
-    if not os.path.exists(cfg_val):
-        with open(cfg_val, "w", encoding="utf-8") as f:
-            f.write("""import { ConfigModel } from './config.model';
-
-export const config: ConfigModel = {
-  baseUrl: 'http://localhost:3000'
-};
-""")
-
-# --------- ALERT infra ---------
-def write_alert_infra(base_dir: str):
-    _, serv_dir, models_dir, shared_comp_dir, _ = ensure_base_dirs(base_dir)
-
-    alert_model = os.path.join(models_dir, "alert.model.ts")
-    alert_store = os.path.join(serv_dir, "alert.store.ts")
-    alerts_ts = os.path.join(shared_comp_dir, "alerts.ts")
-    alerts_html = os.path.join(shared_comp_dir, "alerts.html")
-    alerts_css = os.path.join(shared_comp_dir, "alerts.css")
-
-    if not os.path.exists(alert_model):
-        with open(alert_model, "w", encoding="utf-8") as f:
-            f.write("""export type AlertType = 'success' | 'warning' | 'danger' | 'info';
-
-export interface AlertModel {
-  id: number;
-  type: AlertType;
-  message: string;
-  timeoutMs?: number; // 0 ou undefined = não auto-fecha
-}
-""")
-
-    if not os.path.exists(alert_store):
-        with open(alert_store, "w", encoding="utf-8") as f:
-            f.write("""import { Injectable, signal } from '@angular/core';
-import { AlertModel, AlertType } from '../shared/models/alert.model';
-
-@Injectable({ providedIn: 'root' })
-export class AlertStore {
-  private _alerts = signal<AlertModel[]>([]);
-  alerts = this._alerts.asReadonly();
-  private _id = 0;
-
-  private push(type: AlertType, message: string, timeoutMs = 5000) {
-    const id = ++this._id;
-    const alert: AlertModel = { id, type, message, timeoutMs };
-    this._alerts.update(list => [...list, alert]);
-    if (timeoutMs && timeoutMs > 0) {
-      setTimeout(() => this.close(id), timeoutMs);
-    }
-    return id;
-  }
-
-  success(msg: string, ms = 4000) { return this.push('success', msg, ms); }
-  info(msg: string, ms = 5000)    { return this.push('info', msg, ms); }
-  warning(msg: string, ms = 0)    { return this.push('warning', msg, ms); } // não auto-fecha
-  danger(msg: string, ms = 8000)  { return this.push('danger', msg, ms); }
-
-  close(id: number) { this._alerts.update(list => list.filter(a => a.id != id)); }
-  clear() { this._alerts.set([]); }
-}
-""")
-
-    if not os.path.exists(alerts_ts):
-        with open(alerts_ts, "w", encoding="utf-8") as f:
-            f.write("""import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { AlertStore } from '../../services/alert.store';
-import { AlertModel } from '../models/alert.model';
-
-@Component({
-  selector: 'app-alerts',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './alerts.html',
-  styleUrls: ['./alerts.css']
-})
-export class AlertsComponent {
-  store = inject(AlertStore);
-  alerts = this.store.alerts; // signal<AlertModel[]>
-  cls(a: AlertModel) { return `alert alert-${a.type} alert-dismissible fade show`; }
-  close(id: number)  { this.store.close(id); }
-}
-""")
-
-    if not os.path.exists(alerts_html):
-        with open(alerts_html, "w", encoding="utf-8") as f:
-            f.write("""<div class="app-alerts">
-  <div *ngFor="let a of alerts()" [class]="cls(a)" role="alert">
-    <strong *ngIf="a.type==='success'">Sucesso! </strong>
-    <strong *ngIf="a.type==='warning'">Atenção! </strong>
-    <strong *ngIf="a.type==='danger'">Erro! </strong>
-    <strong *ngIf="a.type==='info'">Info: </strong>
-    {{ a.message }}
-    <button type="button" class="btn-close" aria-label="Close" (click)="close(a.id)"></button>
-  </div>
-</div>
-""")
-
-    if not os.path.exists(alerts_css):
-        with open(alerts_css, "w", encoding="utf-8") as f:
-            f.write(""".app-alerts {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  left: 12px;
-  max-width: 720px;
-  margin: 0 auto;
-  z-index: 2000;
-}
-.app-alerts .alert + .alert { margin-top: 8px; }
-""")
-
-# --------- LOADING + SPINNER + INTERCEPTORS ---------
-def write_loading_infra(base_dir: str):
-    _, serv_dir, _, shared_comp_dir, _ = ensure_base_dirs(base_dir)
-    loading_store = os.path.join(serv_dir, "loading.store.ts")
-    interceptors = os.path.join(serv_dir, "http.interceptors.ts")
-    spinner_ts = os.path.join(shared_comp_dir, "spinner.ts")
-    spinner_html = os.path.join(shared_comp_dir, "spinner.html")
-    spinner_css = os.path.join(shared_comp_dir, "spinner.css")
-
-    if not os.path.exists(loading_store):
-        with open(loading_store, "w", encoding="utf-8") as f:
-            f.write("""import { Injectable, computed, signal } from '@angular/core';
-
-@Injectable({ providedIn: 'root' })
-export class LoadingStore {
-  private _pending = signal(0);
-  readonly pending = this._pending.asReadonly();
-  readonly isLoading = computed(() => this._pending() > 0);
-
-  inc() { this._pending.update(n => n + 1); }
-  dec() { this._pending.update(n => Math.max(0, n - 1)); }
-  reset() { this._pending.set(0); }
-}
-""")
-
-    if not os.path.exists(interceptors):
-        with open(interceptors, "w", encoding="utf-8") as f:
-            f.write("""import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { catchError, finalize, throwError } from 'rxjs';
-import { LoadingStore } from './loading.store';
-import { AlertStore } from './alert.store';
-
-export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
-  const loading = inject(LoadingStore);
-  loading.inc();
-  return next(req).pipe(finalize(() => loading.dec()));
-};
-
-export const errorInterceptor: HttpInterceptorFn = (req, next) => {
-  const alerts = inject(AlertStore);
-  return next(req).pipe(
-    catchError((err: HttpErrorResponse) => {
-      let msg = '';
-      if (err.status == 0) {
-        msg = "Não foi possível conectar ao servidor (" + req.method + " " + req.url + "). Verifique a API, CORS ou rede.";
-      } else {
-        const detail =
-          (typeof err.error === 'string' && err.error) ||
-          (err.error?.message) ||
-          err.message || '';
-        msg = "Erro " + err.status + " em " + req.method + " " + req.url + (detail ? " — " + detail : "");
-      }
-      alerts.danger(msg);
-      return throwError(() => err);
-    })
-  );
-};
-""")
-
-    if not os.path.exists(spinner_ts):
-        with open(spinner_ts, "w", encoding="utf-8") as f:
-            f.write("""import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { LoadingStore } from '../../services/loading.store';
-
-@Component({
-  selector: 'app-spinner',
-  standalone: true,
-  imports: [CommonModule, MatProgressSpinnerModule],
-  templateUrl: './spinner.html',
-  styleUrls: ['./spinner.css']
-})
-export class SpinnerComponent {
-  loading = inject(LoadingStore).isLoading;
-}
-""")
-
-    if not os.path.exists(spinner_html):
-        with open(spinner_html, "w", encoding="utf-8") as f:
-            f.write("""<div class="spinner-overlay" *ngIf="loading()">
-  <div class="spinner-box">
-    <mat-progress-spinner mode="indeterminate" diameter="56"></mat-progress-spinner>
-    <div class="label">Processando...</div>
-  </div>
-</div>
-""")
-
-    if not os.path.exists(spinner_css):
-        with open(spinner_css, "w", encoding="utf-8") as f:
-            f.write(""".spinner-overlay {
-  position: fixed; inset: 0;
-  background: rgba(255,255,255,0.6);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 2100;
-}
-.spinner-box { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.label { font-size: 14px; }
-""")
-
-# --------- Material Theme (styles.scss) ---------
-def write_styles_scss(base_dir: str):
-    src_dir = os.path.join(base_dir, "src")
-    os.makedirs(src_dir, exist_ok=True)
-    styles_path = os.path.join(src_dir, "styles.scss")
-    content = """/* Bootstrap (css) via SCSS import */
-@import 'bootstrap/dist/css/bootstrap.min.css';
-
-/* Angular Material theming (new API) */
-@use '@angular/material' as mat;
-
-@include mat.core();
-
-$my-primary: mat.define-palette(mat.$indigo-palette);
-$my-accent:  mat.define-palette(mat.$blue-palette);
-$my-warn:    mat.define-palette(mat.$red-palette);
-
-$my-theme: mat.define-theme((
-  color: (
-    theme-type: light,
-    primary: $my-primary,
-    tertiary: $my-accent,
-    error: $my-warn
-  ),
-));
-
-:root {
-  @include mat.core-theme($my-theme);
-  @include mat.all-component-themes($my-theme);
-}
-
-/* Hover de botões */
-button.mat-mdc-raised-button.mat-primary:not([disabled]):hover,
-a.mat-mdc-raised-button.mat-primary:hover {
-  filter: brightness(0.95);
-}
-"""
-    if not os.path.exists(styles_path):
-        with open(styles_path, "w", encoding="utf-8") as f:
-            f.write(content)
-    else:
-        with open(styles_path, "r", encoding="utf-8") as f:
-            s = f.read()
-        if "@use '@angular/material' as mat;" not in s or "mat.all-component-themes" not in s:
-            s = s + "\\n\\n/* v11 theme patch */\\n" + content
-            with open(styles_path, "w", encoding="utf-8") as f:
-                f.write(s)
-
-# --------- App component/config ---------
-def write_app_component(base_dir: str):
-    app_dir = os.path.join(base_dir, "src", "app")
-    os.makedirs(app_dir, exist_ok=True)
-    app_component = os.path.join(app_dir, "app.component.ts")
-    tpl = """import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { AlertsComponent } from './shared/components/alerts';
-import { SpinnerComponent } from './shared/components/spinner';
-
-@Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [RouterOutlet, AlertsComponent, SpinnerComponent],
-  template: `
-    <app-alerts></app-alerts>
-    <app-spinner></app-spinner>
-    <router-outlet></router-outlet>
-  `,
-})
-export class AppComponent {}
-"""
-    if not os.path.exists(app_component):
-        with open(app_component, "w", encoding="utf-8") as f:
-            f.write(tpl)
-
-def write_or_patch_app_config(base_dir: str, with_auth: bool):
-    app_dir = os.path.join(base_dir, "src", "app")
-    os.makedirs(app_dir, exist_ok=True)
-    cfg_path = os.path.join(app_dir, "app.config.ts")
-
-    if not os.path.exists(cfg_path):
-        with open(cfg_path, "w", encoding="utf-8") as f:
-            f.write("""import { ApplicationConfig } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { routes } from './app.routes';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideAnimations } from '@angular/platform-browser/animations';
-import { loadingInterceptor, errorInterceptor } from './services/http.interceptors';
-import { authTokenInterceptor } from './auth/auth-token.interceptor';
-
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideRouter(routes),
-    provideHttpClient(withInterceptors([loadingInterceptor, errorInterceptor, authTokenInterceptor])),
-    provideAnimations(),
-  ],
-};
-""")
-        return
-
-    with open(cfg_path, "r", encoding="utf-8") as f:
-        s = f.read()
-
-    changed = False
-    if "withInterceptors" not in s:
-        s = re.sub(r"import\\s*\\{\\s*provideHttpClient\\s*\\}\\s*from\\s*'@angular/common/http';",
-                   "import { provideHttpClient, withInterceptors } from '@angular/common/http';", s)
-        changed = True
-
-    if with_auth and "auth-token.interceptor" not in s:
-        s = s.replace("from './services/http.interceptors';",
-                      "from './services/http.interceptors';\nimport { authTokenInterceptor } from './auth/auth-token.interceptor';")
-        changed = True
-
-    if with_auth and "authTokenInterceptor" not in s:
-        s = re.sub(r"withInterceptors\\((\\[.*?\\])\\)",
-                   "withInterceptors([loadingInterceptor, errorInterceptor, authTokenInterceptor])", s, flags=re.S)
-        changed = True
-
-    if changed:
-        with open(cfg_path, "w", encoding="utf-8") as f:
-            f.write(s)
-
-# --------- AUTH infra ---------
-def normalize_storage(s: str) -> str:
-    if not s: return "localstorage"
-    s = s.strip().lower()
-    if "session" in s: return "sessionstorage"
-    return "localstorage"
-
-def write_auth_infra(base_dir: str, api_prefix: str, storage_kind: str):
-    _, serv_dir, models_dir, _, auth_dir = ensure_base_dirs(base_dir)
-    storage_kind = normalize_storage(storage_kind)
-
-    # token.store.ts
-    token_store = os.path.join(auth_dir, "token.store.ts")
-    with open(token_store, "w", encoding="utf-8") as f:
-        f.write(f"""import {{ Injectable, signal }} from '@angular/core';
-
-const KEY = 'access_token';
-const USER_KEY = 'auth_user';
-const storage: Storage = {'sessionStorage' if storage_kind == 'sessionstorage' else 'localStorage'};
-
-@Injectable({{ providedIn: 'root' }})
-export class TokenStore {{
-  private _token = signal<string | null>(storage.getItem(KEY));
-  token = this._token.asReadonly();
-
-  setToken(tok: string | null) {{
-    if (tok) storage.setItem(KEY, tok); else storage.removeItem(KEY);
-    this._token.set(tok);
-  }}
-  getToken(): string | null {{ return this._token(); }}
-  hasToken(): boolean {{ return !!this._token(); }}
-  clear() {{ this.setToken(null); storage.removeItem(USER_KEY); }}
-
-  setUser(u: any) {{ storage.setItem(USER_KEY, JSON.stringify(u)); }}
-  getUser(): any {{ try {{ return JSON.parse(storage.getItem(USER_KEY) || 'null'); }} catch {{ return null; }} }}
-}}
-""")
-
-    # auth-token.interceptor.ts
-    auth_interceptor = os.path.join(auth_dir, "auth-token.interceptor.ts")
-    with open(auth_interceptor, "w", encoding="utf-8") as f:
-        f.write("""import { HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { TokenStore } from './token.store';
-
-export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
-  const store = inject(TokenStore);
-  const tok = store.getToken();
-  if (tok) {
-    req = req.clone({ setHeaders: { Authorization: `Bearer ${tok}` } });
-  }
-  return next(req);
-};
-""")
-
-    # auth.service.ts
-    auth_service = os.path.join(auth_dir, "auth.service.ts")
-    with open(auth_service, "w", encoding="utf-8") as f:
-        f.write(f"""import {{ inject, Injectable }} from '@angular/core';
-import {{ HttpClient }} from '@angular/common/http';
-import {{ Router }} from '@angular/router';
-import {{ config }} from '../shared/models/config';
-import {{ TokenStore }} from './token.store';
-import {{ Observable, tap }} from 'rxjs';
-
-@Injectable({{ providedIn: 'root' }})
-export class AuthService {{
-  private http = inject(HttpClient);
-  private store = inject(TokenStore);
-  private router = inject(Router);
-
-  login(email: string, password: string): Observable<any> {{
-    return this.http.post(`${{config.baseUrl}}{api_prefix}/auth/login`, {{ email, password }}).pipe(
-      tap((resp: any) => {{
-        const token = resp?.access_token || resp?.token || resp?.jwt || resp;
-        if (typeof token === 'string') this.store.setToken(token);
-      }})
-    );
-  }}
-
-  solicitarCodigo(email: string): Observable<any> {{
-    return this.http.post(`${{config.baseUrl}}{api_prefix}/auth/request-reset`, {{ email }});
-  }}
-
-  redefinirSenha(email: string, codigo: string, novaSenha: string): Observable<any> {{
-    return this.http.post(`${{config.baseUrl}}{api_prefix}/auth/confirm-reset`, {{ email, code: codigo, password: novaSenha }});
-  }}
-
-  logout() {{
-    this.store.clear();
-    this.router.navigate(['/login']);
-  }}
-}}
-""")
-
-    # guard
-    guard = os.path.join(auth_dir, "auth.guard.ts")
-    with open(guard, "w", encoding="utf-8") as f:
-        f.write("""import { CanActivateFn } from '@angular/router';
-import { inject } from '@angular/core';
-import { TokenStore } from './token.store';
-import { Router } from '@angular/router';
-
-export const authGuard: CanActivateFn = () => {
-  const store = inject(TokenStore);
-  const router = inject(Router);
-  if (store.hasToken()) return true;
-  router.navigate(['/login']);
-  return false;
-};
-""")
-
-    # login component
-    login_ts = os.path.join(auth_dir, "login.ts")
-    with open(login_ts, "w", encoding="utf-8") as f:
-        f.write("""import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { Router } from '@angular/router';
-import { AuthService } from './auth.service';
-import { AlertStore } from '../services/alert.store';
-
-@Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule],
-  templateUrl: './login.html',
-  styleUrls: ['./login.css']
-})
-export class LoginComponent {
-  private fb = inject(FormBuilder);
-  private auth = inject(AuthService);
-  private router = inject(Router);
-  private alerts = inject(AlertStore);
-
-  form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
-  });
-
-  onSubmit() {
-    if (this.form.invalid) {
-      this.alerts.warning('Informe e-mail e senha válidos.', 0);
-      return;
-    }
-    const { email, password } = this.form.value as any;
-    this.auth.login(email, password).subscribe({
-      next: () => { this.alerts.success('Bem-vindo!'); this.router.navigate(['/']); },
-      error: () => {}
-    });
-  }
-}
-""")
-    login_html = os.path.join(auth_dir, "login.html")
-    with open(login_html, "w", encoding="utf-8") as f:
-        f.write("""<div class="login-wrap container py-5 d-flex justify-content-center">
-  <form class="card p-4" [formGroup]="form" (ngSubmit)="onSubmit()">
-    <h3 class="mb-3">Entrar</h3>
-    <mat-form-field appearance="outline" class="w-100 mb-2">
-      <mat-label>E-mail</mat-label>
-      <input matInput type="email" formControlName="email">
-      <mat-error *ngIf="form.get('email')?.hasError('required')">Informe o e-mail</mat-error>
-      <mat-error *ngIf="form.get('email')?.hasError('email')">E-mail inválido</mat-error>
-    </mat-form-field>
-
-    <mat-form-field appearance="outline" class="w-100 mb-3">
-      <mat-label>Senha</mat-label>
-      <input matInput type="password" formControlName="password">
-      <mat-error *ngIf="form.get('password')?.hasError('required')">Informe a senha</mat-error>
-      <mat-error *ngIf="form.get('password')?.hasError('minlength')">Mínimo 6 caracteres</mat-error>
-    </mat-form-field>
-
-    <button mat-raised-button color="primary" type="submit" class="w-100 mb-2">Entrar</button>
-    <a routerLink="/recuperar-senha" class="small">Esqueci minha senha</a>
-  </form>
-</div>
-""")
-    login_css = os.path.join(auth_dir, "login.css")
-    with open(login_css, "w", encoding="utf-8") as f:
-        f.write(""".login-wrap form { max-width: 420px; width: 100%; }""")
-
-    # solicitar código
-    req_ts = os.path.join(auth_dir, "request-reset.ts")
-    with open(req_ts, "w", encoding="utf-8") as f:
-        f.write("""import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { AuthService } from './auth.service';
-import { AlertStore } from '../services/alert.store';
-
-@Component({
-  selector: 'app-request-reset',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule],
-  templateUrl: './request-reset.html',
-  styleUrls: ['./request-reset.css']
-})
-export class RequestResetComponent {
-  private fb = inject(FormBuilder);
-  private auth = inject(AuthService);
-  private alerts = inject(AlertStore);
-
-  form = this.fb.group({ email: ['', [Validators.required, Validators.email]] });
-
-  submit() {
-    if (this.form.invalid) { this.alerts.warning('Informe um e-mail válido.', 0); return; }
-    const { email } = this.form.value as any;
-    this.auth.solicitarCodigo(email).subscribe({
-      next: () => this.alerts.success('Código enviado. Verifique seu e-mail.'),
-      error: () => {}
-    });
-  }
-}
-""")
-    req_html = os.path.join(auth_dir, "request-reset.html")
-    with open(req_html, "w", encoding="utf-8") as f:
-        f.write("""<div class="container py-5 d-flex justify-content-center">
-  <form class="card p-4" [formGroup]="form" (ngSubmit)="submit()">
-    <h3 class="mb-3">Recuperar senha</h3>
-    <mat-form-field appearance="outline" class="w-100 mb-3">
-      <mat-label>E-mail</mat-label>
-      <input matInput type="email" formControlName="email">
-    </mat-form-field>
-    <button mat-raised-button color="primary" type="submit" class="w-100">Enviar código</button>
-  </form>
-</div>
-""")
-    with open(os.path.join(auth_dir, "request-reset.css"), "w", encoding="utf-8") as f:
-        f.write(""".card { max-width: 420px; width: 100%; }""")
-
-    # reset-password
-    reset_ts = os.path.join(auth_dir, "reset-password.ts")
-    with open(reset_ts, "w", encoding="utf-8") as f:
-        f.write("""import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { AuthService } from './auth.service';
-import { AlertStore } from '../services/alert.store';
-import { Router } from '@angular/router';
-
-@Component({
-  selector: 'app-reset-password',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule],
-  templateUrl: './reset-password.html',
-  styleUrls: ['./reset-password.css']
-})
-export class ResetPasswordComponent {
-  private fb = inject(FormBuilder);
-  private auth = inject(AuthService);
-  private alerts = inject(AlertStore);
-  private router = inject(Router);
-
-  form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
-    code: ['', [Validators.required]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
-  });
-
-  submit() {
-    if (this.form.invalid) { this.alerts.warning('Preencha todos os campos corretamente.', 0); return; }
-    const { email, code, password } = this.form.value as any;
-    this.auth.redefinirSenha(email, code, password).subscribe({
-      next: () => { this.alerts.success('Senha alterada. Faça login.'); this.router.navigate(['/login']); },
-      error: () => {}
-    });
-  }
-}
-""")
-    with open(os.path.join(auth_dir, "reset-password.html"), "w", encoding="utf-8") as f:
-        f.write("""<div class="container py-5 d-flex justify-content-center">
-  <form class="card p-4" [formGroup]="form" (ngSubmit)="submit()">
-    <h3 class="mb-3">Redefinir senha</h3>
-    <mat-form-field appearance="outline" class="w-100 mb-2">
-      <mat-label>E-mail</mat-label>
-      <input matInput type="email" formControlName="email">
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="w-100 mb-2">
-      <mat-label>Código</mat-label>
-      <input matInput formControlName="code">
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="w-100 mb-3">
-      <mat-label>Nova senha</mat-label>
-      <input matInput type="password" formControlName="password">
-    </mat-form-field>
-    <button mat-raised-button color="primary" type="submit" class="w-100">Alterar</button>
-  </form>
-</div>
-""")
-    with open(os.path.join(auth_dir, "reset-password.css"), "w", encoding="utf-8") as f:
-        f.write(""".card { max-width: 420px; width: 100%; }""")
-
-
-# --------- geração por entidade ---------
-def gen_entity(spec: dict, base_dir: str, api_prefix: str):
-    entity_name = spec["nome"]
-    entity_lower = entity_name.lower()
-    model_name = ts_interface_name(entity_name)
-    api_path = f"{api_prefix}/{entity_lower}s"
-    colunas = spec["colunas"]
-    ui_fields = [f for f in colunas if not f.get("ignore")]
-    perpage = spec.get("perpage") or [10,25,50,100]
-
-    comp_base, serv_dir, models_dir, _, _ = ensure_base_dirs(base_dir)
-    comp_entity_dir = os.path.join(comp_base, entity_lower)
-    os.makedirs(comp_entity_dir, exist_ok=True)
-
-    # Paths
-    model_path = os.path.join(models_dir, f"{entity_lower}.model.ts")
-    service_path = os.path.join(serv_dir, f"{entity_lower}.service.ts")
-    insert_edit_ts = os.path.join(comp_entity_dir, f"inserir.editar.{entity_lower}.ts")
-    insert_edit_html = os.path.join(comp_entity_dir, f"inserir.editar.{entity_lower}.html")
-    insert_edit_css = os.path.join(comp_entity_dir, f"inserir.editar.{entity_lower}.css")
-    list_ts = os.path.join(comp_entity_dir, f"listar.{entity_lower}.ts")
-    list_html = os.path.join(comp_entity_dir, f"listar.{entity_lower}.html")
-    list_css = os.path.join(comp_entity_dir, f"listar.{entity_lower}.css")
-
-    # model
-    model_fields = [f"  {f['nome_col']}: {to_typescript_type(f)};" for f in colunas]
-    model_ts = f"""// Auto-generated on {datetime.now().isoformat()}
-export interface {model_name} {{
-{os.linesep.join(model_fields)}
-}}
-"""
-    with open(model_path, "w", encoding="utf-8") as f:
-        f.write(model_ts)
-
-    # service (usa config.ts)
-    service_ts = f"""// Auto-generated service for {entity_name}
-import {{ inject, Injectable }} from '@angular/core';
-import {{ HttpClient, HttpParams }} from '@angular/common/http';
-import {{ Observable }} from 'rxjs';
-import {{ {model_name} }} from '../shared/models/{entity_lower}.model';
-import {{ config }} from '../shared/models/config';
-
-export interface PageResp<T> {{
-  items?: T[];
-  content?: T[];
-  data?: T[];
-  total?: number;
-  totalElements?: number;
-  count?: number;
-  page?: number;
-  size?: number;
-}}
-
-@Injectable({{ providedIn: 'root' }})
-export class {entity_name}Service {{
-  private http = inject(HttpClient);
-  private baseUrl = `${{config.baseUrl}}{api_path}`;
-
-  list(params?: {{page?: number; size?: number; sort?: string; q?: string}}): Observable<PageResp<{model_name}>|{model_name}[]> {{
-    let httpParams = new HttpParams();
-    if (params?.page != null) httpParams = httpParams.set('page', params.page);
-    if (params?.size != null) httpParams = httpParams.set('size', params.size);
-    if (params?.sort) httpParams = httpParams.set('sort', params.sort);
-    if (params?.q) httpParams = httpParams.set('q', params.q);
-    return this.http.get<PageResp<{model_name}>|{model_name}[]>(this.baseUrl, {{ params: httpParams }});
-  }}
-
-  get(id: number): Observable<{model_name}> {{
-    return this.http.get<{model_name}>(`${{this.baseUrl}}/${{id}}`);
-  }}
-
-  create(payload: any): Observable<{model_name}> {{
-    return this.http.post<{model_name}>(this.baseUrl, payload);
-  }}
-
-  update(id: number, payload: any): Observable<{model_name}> {{
-    return this.http.put<{model_name}>(`${{this.baseUrl}}/${{id}}`, payload);
-  }}
-
-  delete(id: number): Observable<void> {{
-    return this.http.delete<void>(`${{this.baseUrl}}/${{id}}`);
-  }}
-
-  getOptions(entity: string): Observable<any[]> {{
-    return this.http.get<any[]>(`${{config.baseUrl}}{api_prefix}/${{entity}}`);
-  }}
-}}
-"""
-    with open(service_path, "w", encoding="utf-8") as f:
-        f.write(service_ts)
-
-    # fields meta
-    def fields_ts():
-        arr = []
-        for f in ui_fields:
-            whitelisted = {
-                "nome": f.get("nome"),
-                "label": labelize(f.get("nome","")),
-                "tipo": f.get("tipo"),
-                "input": f.get("input") or ( "senha" if f.get("senha") else (
-                    "email" if (f.get("input")=="email" or f.get("nome","").endswith("email")) else (
-                    "number" if f.get("tipo") in ("int","float","number") else (
-                    "datetime" if f.get("tipo")=="datetime" else (
-                    "date" if f.get("tipo")=="date" else "text"))))),
-                "tam": f.get("tam"),
-                "select": f.get("select"),
-                "obrigatorio": f.get("obrigatorio", False),
-                "readonly": f.get("readonly", False),
-                "unico": f.get("unico", False),
-                "img": f.get("img", False),
-                "file": f.get("file")
-            }
-            pairs = [ f"{k}: {ts_value(v)}" for k,v in whitelisted.items() if v is not None ]
-            arr.append("{ " + ", ".join(pairs) + " }")
-        return "[\\n  " + ",\\n  ".join(arr) + "\\n]"
-    fields_ts_text = fields_ts()
-
-    form_controls = [f"      {f['nome_col']}: new FormControl({form_control_init(f)})" for f in ui_fields]
-    form_controls_text = ",\\n".join(form_controls)
+    form_controls_text = "\n".join(form_controls)
 
     # inserir/editar
     inserir_editar_ts = f"""// Auto-generated insert/edit component for {entity_name}
@@ -1803,6 +911,7 @@ import {{ MatRadioModule }} from '@angular/material/radio';
 import {{ MatAutocompleteModule }} from '@angular/material/autocomplete';
 import {{ MatButtonModule }} from '@angular/material/button';
 import {{ MatIconModule }} from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {{ {model_name} }} from '../../shared/models/{entity_lower}.model';
 import {{ AlertStore }} from '../../services/alert.store';
 
@@ -1827,7 +936,7 @@ type FieldMeta = {{
     CommonModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule, MatSelectModule,
     MatDatepickerModule, MatNativeDateModule, MatRadioModule,
-    MatAutocompleteModule, MatButtonModule, MatIconModule
+    MatAutocompleteModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule
   ],
   templateUrl: './inserir.editar.{entity_lower}.html',
   styleUrls: ['./inserir.editar.{entity_lower}.css']
@@ -1842,6 +951,10 @@ export class InserirEditar{entity_name}Component {{
   id: number | null = null;
   loading = signal(false);
   submitted = signal(false);
+
+
+  isEdit(): boolean {{ return !!this.id; }}
+  hasControl(name: string): boolean {{ return !!this.form?.get(name); }}
 
   fields: FieldMeta[] = {fields_ts_text};
   filesMap: Record<string, File | undefined> = {{}};
@@ -1926,15 +1039,15 @@ export class InserirEditar{entity_name}Component {{
     with open(insert_edit_ts, "w", encoding="utf-8") as f:
         f.write(inserir_editar_ts)
 
-    inserir_editar_html = """<!-- Auto-generated template -->
+    inserir_editar_html = """"""<!-- Auto-generated template -->
 <div class="container py-3">
-  <h2 class="mb-3">@if (isEdit()) { Editar } @else { Cadastrar } ENTITY_NAME</h2>
+  <h2 class=\"mb-3\">@if (isEdit()) { Editar } @else { Cadastrar } ENTITY_NAME</h2>
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
     <div class="row g-3">
       <ng-container *ngFor="let f of fields">
         <div class="col-12 col-md-6">
-          <mat-form-field floatLabel="always" appearance="outline" class="w-100">
+          <mat-form-field appearance="outline" class="w-100">
             <mat-label>{{ f.label }}</mat-label>
 
             <input *ngIf="['text','email','senha','number','time','datetime','date'].includes(f.input)"
@@ -1984,62 +1097,21 @@ export class InserirEditar{entity_name}Component {{
       </ng-container>
     </div>
 
-<!-- Bloco de senha (gerado se existir campo 'senha' na entidade) -->
-@if (hasControl('novaSenha')) {
-  <div class="row g-3 mt-1">
-    @if (isEdit()) {
-      <div class="col-12">
-        <mat-checkbox formControlName="alterarSenha">Alterar senha?</mat-checkbox>
-      </div>
-      <div class="col-12 col-md-6" *ngIf="form.get('alterarSenha')?.value">
-        <mat-form-field appearance="outline" floatLabel="always" class="w-100">
-          <mat-label>Nova senha</mat-label>
-          <input matInput type="password" formControlName="novaSenha">
-          <mat-error *ngIf="form.get('novaSenha')?.hasError('required')">Obrigatória</mat-error>
-          <mat-error *ngIf="form.get('novaSenha')?.hasError('minlength')">Mínimo 6 caracteres</mat-error>
-        </mat-form-field>
-      </div>
-      <div class="col-12 col-md-6" *ngIf="form.get('alterarSenha')?.value">
-        <mat-form-field appearance="outline" floatLabel="always" class="w-100">
-          <mat-label>Confirmar nova senha</mat-label>
-          <input matInput type="password" formControlName="confirmaSenha">
-          <mat-error *ngIf="form.get('confirmaSenha')?.hasError('required')">Obrigatória</mat-error>
-          <mat-error *ngIf="form.get('confirmaSenha')?.hasError('mismatch')">Senhas não conferem</mat-error>
-        </mat-form-field>
-      </div>
-    } @else {
-      <div class="col-12 col-md-6">
-        <mat-form-field appearance="outline" floatLabel="always" class="w-100">
-          <mat-label>Senha</mat-label>
-          <input matInput type="password" formControlName="novaSenha">
-          <mat-error *ngIf="form.get('novaSenha')?.hasError('required')">Obrigatória</mat-error>
-          <mat-error *ngIf="form.get('novaSenha')?.hasError('minlength')">Mínimo 6 caracteres</mat-error>
-        </mat-form-field>
-      </div>
-      <div class="col-12 col-md-6">
-        <mat-form-field appearance="outline" floatLabel="always" class="w-100">
-          <mat-label>Confirmar senha</mat-label>
-          <input matInput type="password" formControlName="confirmaSenha">
-          <mat-error *ngIf="form.get('confirmaSenha')?.hasError('required')">Obrigatória</mat-error>
-          <mat-error *ngIf="form.get('confirmaSenha')?.hasError('mismatch')">Senhas não conferem</mat-error>
-        </mat-form-field>
-      </div>
-    }
-  </div>
-}
-
     <div class="mt-3 d-flex gap-2">
       <button mat-raised-button color="primary" type="submit" [disabled]="loading()">
-  <ng-container *ngIf="!loading(); else spinnerInsideButton">
-    <mat-icon>save</mat-icon>
-    <span>Salvar</span>
-  </ng-container>
-  <ng-template #spinnerInsideButton>
-    <mat-progress-spinner mode="indeterminate" diameter="20" class="btn-spinner"></mat-progress-spinner>
-    <span>Salvando...</span>
-  </ng-template>
-</button>
-      <button mat-stroked-button type="button" (click)="onCancel()">Cancelar</button>
+        <ng-container *ngIf="!loading(); else spinnerInsideButton">
+          <mat-icon>save</mat-icon>
+          <span>Salvar</span>
+        </ng-container>
+        <ng-template #spinnerInsideButton>
+          <mat-progress-spinner mode="indeterminate" diameter="20" class="btn-spinner"></mat-progress-spinner>
+          <span>Salvando...</span>
+        </ng-template>
+      </button>
+      <button mat-stroked-button type="button" (click)="onCancel()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Cancelar</span>
+      </button>
     </div>
   </form>
 
@@ -2068,14 +1140,13 @@ button.mat-mdc-icon-button:hover {
   filter: brightness(1.05);
 }
 
-
-/* Utilidades */
-.btn-spinner { margin-right: 8px; }
-.d-flex { display: flex; align-items: center; }
-.gap-2 { gap: .5rem; }
-.mt-1 { margin-top: .5rem; }
+.mb-3 { margin-bottom: 1rem; }
 .mt-3 { margin-top: 1rem; }
+.d-flex { display: flex; align-items: center; gap: .5rem; }
+.gap-2 { gap: .5rem; }
 .w-100 { width: 100%; }
+.btn-spinner { margin-right: 8px; }
+
 """
     with open(insert_edit_css, "w", encoding="utf-8") as f:
         f.write(inserir_editar_css)
@@ -2348,12 +1419,15 @@ python generate_angular_crud_multi_v11.py --spec-dir ./entidades --base . --pref
 #--------- main ---------
 def main():
     parser = argparse.ArgumentParser(description="Gera Angular CRUD multi-entidades com autenticação opcional (v11).")
-    parser.add_argument("--spec-dir", required=True, help="Diretório com arquivos .json (cada entidade).")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--spec-dir", help="Diretório com arquivos .json (cada entidade).")
+    group.add_argument("--spec-file", help="Arquivo único .json com a chave \"entidades\".")
     parser.add_argument("--base", default=".", help="Diretório base (default=cwd).")
     parser.add_argument("--prefix", default="/api", help="Prefixo da API (default=/api).")
     args = parser.parse_args()
 
-   
+
+
     base_dir = os.path.abspath(args.base)
     api_prefix = norm_prefix(args.prefix)
 
@@ -2363,19 +1437,45 @@ def main():
     write_loading_infra(base_dir)
     write_app_component(base_dir)
     # auth pode ser habilitado por user.json
-    json_files = sorted(glob(os.path.join(args.spec_dir, "*.json")))
-    if not json_files:
-        raise SystemExit("Nenhum .json encontrado em --spec-dir.")
+
+    specs_iter = []
+    if getattr(args, "spec_dir", None):
+        json_files = sorted(glob(os.path.join(args.spec_dir, "*.json")))
+        if not json_files:
+            raise SystemExit("Nenhum .json encontrado em --spec-dir.")
+        specs_iter = [("file", path) for path in json_files]
+    else:
+        # modo arquivo único
+        try:
+            import json as _json
+            raw = open(args.spec_file, "r", encoding="utf-8").read()
+            payload = _json.loads(raw)
+        except Exception as e:
+            raise SystemExit(f"Falha ao ler --spec-file: {e}")
+        if isinstance(payload, dict) and isinstance(payload.get("entidades"), list):
+            specs_iter = [("obj", ent) for ent in payload["entidades"]]
+        elif isinstance(payload, list):
+            specs_iter = [("obj", ent) for ent in payload]
+        else:
+            specs_iter = [("obj", payload)]
 
     routes = []
     with_auth = False
     storage_kind = "localstorage"
 
-    for path in json_files:
-        spec = load_json_tolerant(path)
+    for kind, item in specs_iter:
+        if kind == 'file':
+            path = item
+            spec = load_json(path)
+        else:
+            path = None
+            spec = item
+
+        label = (os.path.basename(path) if path else str((spec or {}).get('nome','<spec>')))
+# spec already set above for both modes
         if spec is None: continue
         if not isinstance(spec, dict) or "nome" not in spec or "colunas" not in spec:
-            print(f"[WARN] Ignorando {os.path.basename(path)}: falta 'nome'/'colunas'.")
+            print(f"[WARN] Ignorando {label}: falta 'nome'/'colunas'.")
             continue
 
         nome_lower = str(spec.get("nome","")).strip().lower()
@@ -2384,7 +1484,7 @@ def main():
             with_auth = True
             storage_kind = normalize_storage(spec.get("token_armazenamento") or "localstorage")
 
-        print(f"[GEN] {os.path.basename(path)} -> entidade {spec['nome']}")
+        print(f"[GEN] {label} -> entidade {spec['nome']}")
         r = gen_entity(spec, base_dir, api_prefix)
         routes.append(r)
 
