@@ -1,0 +1,797 @@
+{
+  "versao": "3.11",
+  "gerado_em": "2025-10-30 14:01:02",
+  "banco": "clinica_fap",
+  "total_tabelas": 73,
+  "biblioteca_material":true,
+  "loads_with_spinner":true,
+  "Menu": {
+	  "inicio_left":true,
+	  "ocultar_menu_quando_deslogado":true,
+	  "logo":true,
+	  "home":true,
+      "perfil":true,
+	  "configuracoes": { "items":["Agendamento","Painel","Arquivos de Mídia"],
+	    "role": [4,5,6,7]
+	    },
+      "listar":{ "items": ["User", "Perfil", "Userperfil","Paciente", "Dometnia","Domestadocivil", "Domsituacaoocupacional","Domescolaridade" ],
+      "cadastro":["Paciente","Grupo Supervisão", "Triagem"],
+	  "role": [4,5,6,7]
+	  },
+	  "agendamento":{
+		  "items": ["Agendar", "Confirmar","Remarcar","Cancelar"],
+		  "role": [4,5,6,7]
+	  },
+	  "botao_usuario":{
+		"exibir_nome":true,
+		"nome_completo":true,
+		"exibir_perfis":true,
+		"exibir_imagem":true,
+		"items_logado": ["Meu Perfil", "Configurações", "Logout"],
+		"items_deslogado": ["Login"]
+	  }
+    },
+  "entidades": [
+    {
+      "tablename": "tb01_user",
+      "nome": "User",
+	  "tela_login": true,
+	  "access_token": true,
+	  "token_armazenamento": "localstorage",
+	  "error_interceptor": true,
+	  "auth_token_interceptor": true,
+	  "auth_guard": true,
+	  "auth_store": true,
+	  "request_reset_password": true,
+	  "reset_password": true,
+	  "pagination": true,
+	  "perpage": [15, 25, 50, 100],
+	  "hasImage": true,     
+      "colunas": [
+        {
+          "nome_col": "nu_user",           
+		  "tipo": "int",           
+		  "tam": null,           
+		  "obrigatoria": 1,   
+          "listar":1,		  
+		  "default": null,           
+		  "comentario": "PK do usuário",           
+		  "primary_key": 1
+        },
+        {
+          "nome_col": "no_user",           
+		  "tipo": "str",           
+		  "tam": 150,           
+		  "obrigatoria": 1,           
+		  "default": null,           
+		  "comentario": "Nome completo",           
+		  "primary_key": 0
+        },
+        {
+          "nome_col": 
+		  "no_email",           
+		  "tipo": "str",           
+		  "tam": 180,           
+		  "obrigatoria": 1,           
+		  "default": null,           
+		  "comentario": "Email", 
+          "listar":1,          
+		  "primary_key": 0
+        },
+        {
+          "nome_col": "ds_senha_hash",      
+		  "tipo": "str",           
+		  "tam": 255,           
+		  "obrigatoria": 1,           
+		  "default": null,           
+		  "comentario": "Senha (hash)",           
+		  "primary_key": 0
+        },
+        {
+          "nome_col": "ic_ativo",           
+		  "tipo": "int",           
+		  "tam": null,           
+		  "obrigatoria": 1,           
+		  "default": "1",           
+		  "comentario": "1=ativo,0=inativo", 		  
+		  "listar":1,           
+		  "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    },
+    {
+      "tablename": "tb02_perfil",
+      "nome": "Perfil",
+      "colunas": [
+        {
+          "nome_col": "nu_perfil",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "PK do perfil",
+		  "listar":1,
+          "primary_key": 1
+        },
+        {
+          "nome_col": "no_perfil",
+          "tipo": "str",
+          "tam": 120,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "Nome do perfil (admin, gestor, user)",
+		  "listar":1,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "ds_perfil",
+          "tipo": "str",
+          "tam": 255,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "Descrição",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "ic_ativo",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+          "default": "1",
+		  "listar":1,
+          "comentario": "1=ativo,0=inativo",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    },
+    {
+      "tablename": "tb03_user_perfil",
+      "nome": "UserPerfil",
+	  "pagination": true,
+	  "perpage": [15, 25, 50, 100],
+      "colunas": [
+        {
+          "nome_col": "nu_user_perfil",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+		  "listar":1,
+          "comentario": "PK da associação",
+          "primary_key": 1
+        },
+        {
+          "nome_col": "nu_user",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": "FK tb01_user.nu_user",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_perfil",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": "FK tb02_perfil.nu_perfil",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    },
+    {
+      "tablename": "tb08_paciente",
+      "nome": "Paciente",
+	  "pagination": true,
+	  "perpage": [15, 25, 50, 100],
+      "colunas": [
+        {
+          "nome_col": "nu_paciente",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+		  "listar":1,
+          "default": null,
+          "comentario": "PK do paciente",
+          "primary_key": 1
+        },
+        {
+          "nome_col": "no_paciente",
+          "tipo": "str",
+          "tam": 150,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "Nome completo",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "no_social",
+          "tipo": "str",
+          "tam": 120,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Nome social",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dt_nascimento",
+          "tipo": "Date",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data de nascimento",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "sg_sexo",
+          "tipo": "str",
+          "tam": 1,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": "F/M/O",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_cpf",
+          "tipo": "str",
+          "tam": 14,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": "CPF",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_rg",
+          "tipo": "str",
+          "tam": 20,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "no_mae",
+          "tipo": "str",
+          "tam": 150,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "no_pai",
+          "tipo": "str",
+          "tam": 150,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "no_responsavel",
+          "tipo": "str",
+          "tam": 150,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Responsável legal",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "ds_endereco",
+          "tipo": "str",
+          "tam": 255,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "no_bairro",
+          "tipo": "str",
+          "tam": 120,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "no_cidade",
+          "tipo": "str",
+          "tam": 120,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "sg_uf",
+          "tipo": "str",
+          "tam": 2,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_cep",
+          "tipo": "str",
+          "tam": 9,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_telefone1",
+          "tipo": "str",
+          "tam": 20,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_telefone2",
+          "tipo": "str",
+          "tam": 20,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "no_email",
+          "tipo": "str",
+          "tam": 180,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_escolaridade",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": "FK tb67_dom_escolaridade.nu_escolaridade",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_estado_civil",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": "FK tb68_dom_estado_civil.nu_estado_civil",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_etnia",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": "FK tb70_dom_etnia.nu_etnia",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_situacao_ocupacional",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": "FK tb69_dom_situacao_ocupacional.nu_situicao_ocupacional",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    },
+    {
+      "tablename": "tb67_dom_escolaridade",
+      "nome": "DomEscolaridade",
+      "colunas": [
+        {
+          "nome_col": "nu_escolaridade",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+		  "listar":1,
+          "default": null,
+          "comentario": "PK do domínio Escolaridade",
+          "primary_key": 1
+        },
+        {
+          "nome_col": "no_escolaridade",
+          "tipo": "str",
+          "tam": 120,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": "Descrição",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    },
+    {
+      "tablename": "tb68_dom_estado_civil",
+      "nome": "DomEstadoCivil",
+      "colunas": [
+        {
+          "nome_col": "nu_estado_civil",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 1
+        },
+        {
+          "nome_col": "no_estado_civil",
+          "tipo": "str",
+          "tam": 120,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    },
+    {
+      "tablename": "tb69_dom_situacao_ocupacional",
+      "nome": "DomSituacaoOcupacional",
+      "colunas": [
+        {
+          "nome_col": "nu_situacao_ocupacional",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 1
+        },
+        {
+          "nome_col": "no_situacao_ocupacional",
+          "tipo": "str",
+          "tam": 120,
+          "obrigatoria": 1,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    },
+    {
+      "tablename": "tb70_dom_etnia",
+      "nome": "DomEtnia",
+      "colunas": [
+        {
+          "nome_col": "nu_etnia",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+		  "listar":1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 1
+        },
+        {
+          "nome_col": "no_etnia",
+          "tipo": "str",
+          "tam": 120,
+          "obrigatoria": 1,
+          "default": null,
+          "comentario": null,
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_create",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário criador",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_create_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": "CURRENT_TIMESTAMP",
+          "comentario": "Data/hora de criação",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "nu_update",
+          "tipo": "int",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Usuário última atualização",
+          "primary_key": 0
+        },
+        {
+          "nome_col": "dh_update_at",
+          "tipo": "datetime",
+          "tam": null,
+          "obrigatoria": 0,
+          "default": null,
+          "comentario": "Data/hora de última atualização",
+          "primary_key": 0
+        }
+      ]
+    }
+  ]
+}
